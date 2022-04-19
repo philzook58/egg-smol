@@ -1,0 +1,6 @@
+{
+  "math-ast": "(datatype Math\n  (Num i64)\n  (Var String)\n  (Add Math Math))\n\n(define start (Add (Num 3) (Add (Num 4) (Var 42)))) ;; TODO typecheck this!\n(define goal  (Add (Num 7) (Var 42)))\n\n(rewrite (Add x y) (Add y x))\n(rewrite (Add (Add x y) z) (Add x (Add y z)))\n(rewrite (Add (Num x) (Num y)) (Num (+ x y)))\n\n(run 3)\n(check (= start goal))\n(extract start)\n",
+  "primitives": "(check (= (+ 2 2)  4))\n(check (= (- 2 1)  1))\n(check (= (- 1 2) -1))",
+  "interval": "(datatype Math\n  (Num i64)\n  (Var String)\n  (Mul Math Math))\n\n(function hi (Math) (Min i64))\n(function lo (Math) (Max i64))\n\n(rule ((= mul (Mul a b)))\n      ((= (lo mul) \n          (min (min (* (lo a) (lo b)) (* (lo a) (hi b)))\n               (min (* (hi a) (lo b)) (* (hi a) (hi b)))))))\n\n(define x (Var \"x\"))\n(define e (Mul x x))\n\n(assert (= (lo x) -10))\n(assert (= (hi x)  10))\n\n(run 1)\n\n(check (= (lo e) -100))\n\n(rule ((= mul (Mul a a)))\n      ((= (lo mul) (* (lo a) (lo a)))))\n\n(run 1)\n(check (= (lo e) 100))\n",
+  "path": "(relation path (i64 i64))\n(relation edge (i64 i64))\n\n(rule ((edge x y))\n      ((path x y)))\n\n(rule ((path x y) (edge y z))\n      ((path x z)))\n        \n(assert (edge 1 2))\n(assert (edge 2 3))\n(assert (edge 3 4))\n(check (edge 1 2))\n(run 3)\n(check (path 1 4))"
+}
