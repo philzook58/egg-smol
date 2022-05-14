@@ -1,0 +1,60 @@
+(datatype BitVec
+    (Lit i64 i64)
+    (BVVar i64 String)
+    (Concat BitVec BitVec)
+    (Extract i64 i64 BitVec)
+    (BVAnd BitVec BitVec)
+    (BVOr BitVec BitVec)
+    (BVNot BitVec)
+    (BVNeg BitVec)
+    (BVAdd BitVec BitVec)
+    (BVMul BitVec BitVec)
+)
+
+(datatype Math (Num i64))
+
+(function bvlen (BitVec) i64) ; can't do this? (bvlen (BitVec) Math) instead? 
+(function bvult (BitVec) bool) ; can't do this?
+
+; https://smtlib.cs.uiowa.edu/theories-FixedSizeBitVectors.shtml
+; https://www.brics.dk/RS/99/18/BRICS-RS-99-18.pdf Solving Bit-Vector Equations of Fixed and Non-Fixed Size
+
+; Maybe only support up to 64 bit? Makes it a bit easier.
+(rewrite (Concat (Lit n a) (Lit m b))  (Lit (+ n m) (or64 (shl a m) b)))
+; the smtlib lib convention on the index order of extract is bizarre. But it is what it is.
+(rewrite (Extract i j (Lit n a)) (Lit (- i j) (shr a j)) ; should I zero out the pieces we don't want?
+
+; conditional rewrites. Use rules? The following is not valid syntax.
+(rewrite (Extract i j (Concat a b)) (< i (bvlen a))  (Extract i j a))
+(rewrite (Extract i j (Concat a b)) (> j (bvlen a))  (Extract (- i (bvlen a) (- j (bvlen a)) b))
+(rewrite ((Extract i j (Concat a b)) (> i (bvlen a)) (< j (bvlen a)))
+    (Concat (Extract j (bvlen a) a)) (Extract 0 (- i (bvlen a)) b))
+
+; identities for these operations
+(rewrite (Extract (bvlen a) 0 a) a)
+(rewrite (Concat a (Lit 0 i)) a)
+(rewrite (Concat (Lit 0 i) b) b)
+
+; be careful about the other direction though
+; requires len guard
+(rewrite (Concat (BVAnd a b) (BVAnd c d)) (BVAnd (Concat a c) (Concat b d)))
+
+; and so on for unary operations
+(rewrite (BVNot (Concat a b)) (Concat (BVNot a) (BVNot b)))
+(rewrite (Concat (BVNot a) (BVNot b)) (BVNot (Concat a b)))
+(rewrite (BVNot (Extract i j a)) (Extract i j (BVNot a)))
+
+; involution
+(rewrite (BVNot (BVNot a)) a)
+
+; commutativty, associativity, abosrtion laws of or,and
+; distributivity
+
+(rewrite (bvlen (Lit n a)) n)
+(rewrite (bvlen (BVAnd a b)) (bvlen a))
+(rewrite (bvlen (BVNot a)) (bvlen a))
+(rewrite (bvlen (Extract i j a)) (+ (- i j) 1)) ; check this. possible off by one
+(rewrite (bvlen (Concat a b)) (+ (bvlen a) (bvlen b)))
+
+(define b0 (Lit 1 0))
+(define b1 (Lit 1 1))
