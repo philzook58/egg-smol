@@ -42,6 +42,7 @@ Command: Command = {
     "(" "run" <Num> ")" => Command::Run(<>.try_into().unwrap()),
     "(" "extract" <Expr> ")" => Command::Extract(<>),
     "(" "check" <Fact> ")" => Command::Check(<>),
+    "(" "query" <List<Fact>> ")" => Command::Query(<>),
     "(" "dl" <DLCommand> ")" => <>
 }
 

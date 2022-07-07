@@ -60,6 +60,7 @@ pub enum Command {
     Extract(Expr),
     // TODO: this could just become an empty query
     Check(Fact),
+    Query(Vec<Fact>),
 }
 
 #[derive(Clone, Debug)]
