@@ -1,0 +1,66 @@
+; Ordinary functional programming with lists
+; https://v2.ocaml.org/api/List.html
+(datatype List
+    (Cons i64 List)
+    (Nil)
+)
+
+(relation diseq-list (List List))
+(rule ((diseq-list x y)) ((diseq-list y x)))
+(diseq-list (Nil) (Nil))
+
+; injectivity
+(rule ((= (Cons i xs) l1) (= (Cons j ys) l2) (!= i j)) ((diseq-list l1 l2)))
+(rule ((= (Cons i xs) l1) (= (Cons j ys) l2) (diseq-list xs ys)) ( (diseq-list l1 l2)  ))
+
+(function append (List List) List)
+(rewrite (append (Cons x xs) ys) (Cons x (append xs ys)))
+(rewrite (append Nil ys) ys)
+
+; unnecessary? Depends how opaque lists are
+(rewrite (append xs Nil) xs)
+(rewrite (append (append xs ys) zs) (append xs (append ys zs)))
+(rule ((= (append xs ys) (Nil))) ((set (Nil) xs) (set (Nil) ys)))
+
+
+(function rev (List) List)
+(rewrite (rev (Cons x xs)) (append (rev xs) (Cons x (Nil))))
+(rewrite (rev (Nil)) (Nil))
+
+(define testlist1 (Cons 55 (Cons 42 (Nil))))
+(define test1 (rev testlist1))
+(run 10)
+(check (= test1 (Cons 42 (Cons 55 (Nil)))))
+
+; Truly partial functions?
+(function tl (List) List)
+(rewrite (tl (Cons x xs)) xs)
+
+(function hd (List) i64)
+(rewrite (hd (Cons x xs)) x)
+
+(datatype OptInt (SomeInt i64))
+
+(function length (List) OptInt)
+(set (length (Nil)) (SomeInt 0))
+(rule ((= (length (Cons x xs)) n))
+       ((define demand (length xs))))
+(rule ((= (length l) n)
+       (= (Cons x xs) l)
+       (= (length xs) (SomeInt n1)))
+       ((set (length l) (SomeInt (+ n1 1)))))
+
+
+(define demand1 (length testlist1))
+(run 10)
+(check (= demand1 (SomeInt 2)))
+
+(function nth (i64 List) OptInt)
+(rewrite (nth 0 (Cons x xs)) (SomeInt x))
+(rule ((= (nth n (Cons x xs)) e) (!= n 0))
+       ((set (nth (- n 1) xs) e)))
+
+(define demand2 (nth 1 testlist1))
+(run 10)
+(check (= demand2 (SomeInt 42)))
+
