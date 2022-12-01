@@ -42,7 +42,7 @@ Command: Command = {
     "(" "rule" <body:List<Fact>> <head:List<Action>> ")" => Command::Rule(Rule { head, body }),
     "(" "rewrite" <lhs:Expr> <rhs:Expr>
         <conditions:(":when" <List<Fact>>)?>
-    ")" => Command::Rewrite(Rewrite { lhs, rhs, conditions: conditions.unwrap_or_default() }),
+    ")" => Command::Rewrite(Rewrite { lhs, rhs, conditions: conditions.unwrap_or_default() }),    
     "(" "define" <name:Ident> <expr:Expr> <cost:Cost> ")" => Command::Define { name, expr, cost },
     <NonLetAction> => Command::Action(<>),
     "(" "run" <UNum> ")" => Command::Run(<>),
@@ -127,3 +127,11 @@ Ident: Symbol = <s:r"[[:alpha:]][\w-]*"> => s.parse().unwrap();
 PrimitiveSymbol: Symbol = <r"[-+*/!=<>&|^/%]+"> => Symbol::from(<>);
 SymString: Symbol = <r#""[^"]*""#> => Symbol::from(<>);
 String: String = <r#""[^"]*""#> => (<>).trim_matches('"').to_owned();
+
+pub MacroProgram: Vec<MacroCommand> = { (MacroCommand)* => <> }
+
+MacroCommand: MacroCommand = {  
+    "(" "macro-rewrite" <lhs:Expr> <rhs:Expr>
+    ")" => MacroCommand::MacroRewrite(Rewrite { lhs, rhs, conditions: vec![] }),
+    <Expr> => MacroCommand::Syntax(<>)
+} 

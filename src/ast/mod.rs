@@ -74,7 +74,11 @@ pub enum Command {
     Push(usize),
     Pop(usize),
 }
-
+#[derive(Debug)]
+pub enum MacroCommand {
+    MacroRewrite(Rewrite),
+    Syntax(Expr),
+}
 #[derive(Clone, Debug)]
 pub struct FunctionDecl {
     pub name: Symbol,

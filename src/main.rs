@@ -1,8 +1,9 @@
 use clap::Parser;
+use egg_smol::ast;
+use egg_smol::egg_macro;
 use egg_smol::EGraph;
 use std::io::{self, BufRead};
 use std::path::PathBuf;
-
 #[derive(Debug, Parser)]
 struct Args {
     #[clap(short = 'F', long)]
@@ -44,6 +45,27 @@ fn main() {
             let arg = input.to_string_lossy();
             panic!("Failed to read file {arg}")
         });
+        let parser = ast::parse::MacroProgramParser::new();
+        let program = parser
+            .parse(&s)
+            .map_err(|e| e.map_token(|tok| tok.to_string()))
+            .unwrap();
+        let macros = program.into_iter().filter_map(|e| match e {
+            ast::MacroCommand::MacroRewrite(r) => Some(r),
+            _ => None,
+        });
+        let exprs = program
+            .into_iter()
+            .filter_map(|e| match e {
+                ast::MacroCommand::Syntax(e) => {
+                    Some(egg_macro::macro_expand(macros, e).to_string())
+                }
+                _ => None,
+            })
+            .collect();
+        let s = exprs.join("\n");
+        //let s = program.map(|e| e.to_string());
+
         let mut egraph = EGraph::default();
         egraph.fact_directory = args.fact_directory.clone();
         egraph.seminaive = !args.naive;

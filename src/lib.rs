@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod egg_macro;
 mod extract;
 mod gj;
 pub mod sort;
@@ -6,7 +7,6 @@ mod typecheck;
 mod unionfind;
 pub mod util;
 mod value;
-
 use hashbrown::hash_map::Entry;
 use indexmap::map::Entry as IEntry;
 use instant::{Duration, Instant};
@@ -830,6 +830,16 @@ impl EGraph {
         };
         self.add_rule_with_name(name, rule)
     }
+    /*
+    pub fn add_macro_rewrite(&mut self, rewrite: ast::Rewrite) -> Result<Symbol, Error> {
+        let mut name = format!("{} -> {}", rewrite.lhs, rewrite.rhs);
+        //if !rewrite.conditions.is_empty() {
+        //    write!(name, " if {}", ListDisplay(&rewrite.conditions, ", ")).unwrap();
+        //}
+
+        self.add_rule_with_name(name, rule)
+    }
+    */
 
     pub fn eval_actions(&mut self, actions: &[Action]) -> Result<(), Error> {
         let types = Default::default();
