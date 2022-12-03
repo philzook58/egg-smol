@@ -280,6 +280,7 @@ pub struct EGraph {
     primitives: HashMap<Symbol, Vec<Primitive>>,
     functions: HashMap<Symbol, Function>,
     rules: HashMap<Symbol, Rule>,
+    modules: HashMap<Symbol, Self>,
     saturated: bool,
     timestamp: u32,
     pub match_limit: usize,
@@ -310,6 +311,7 @@ impl Default for EGraph {
             rules: Default::default(),
             primitives: Default::default(),
             presorts: Default::default(),
+            modules: Default::default(),
             match_limit: 10_000_000,
             node_limit: 100_000_000,
             timestamp: 0,
@@ -347,6 +349,34 @@ impl EGraph {
             }
             None => Err(Error::Pop),
         }
+    }
+
+    pub fn resolve_scope(&self, scope: &[Symbol]) -> Option<&Self> {
+        let mut egraph = self;
+        for ident in scope {
+            egraph = egraph.modules.get(ident)?;
+        }
+        Some(egraph)
+    }
+    pub fn resolve_scope_mut(&mut self, scope: &[Symbol]) -> Option<&mut Self> {
+        let mut egraph = self;
+        for ident in scope {
+            egraph = egraph.modules.get_mut(ident)?;
+        }
+        Some(egraph)
+    }
+
+    pub fn get_function(&self, ident: &ScopedIdent) -> Option<&Function> {
+        let egraph = self.resolve_scope(&ident.scope)?;
+        egraph.functions.get(&ident.ident)
+    }
+    pub fn get_function_mut(&mut self, ident: &ScopedIdent) -> Option<&mut Function> {
+        let mut egraph = self.resolve_scope_mut(&ident.scope).unwrap();
+        egraph.functions.get_mut(&ident.ident)
+    }
+    pub fn get_primitive(&self, ident: &ScopedIdent) -> Option<&Vec<Primitive>> {
+        let egraph = self.resolve_scope(&ident.scope)?;
+        egraph.primitives.get(&ident.ident)
     }
 
     pub fn add_arcsort(&mut self, sort: ArcSort) -> Result<(), Error> {
@@ -469,6 +499,10 @@ impl EGraph {
         new_unions
     }
 
+    pub fn declare_module(&mut self, name: impl Into<Symbol>, module: Self) {
+        self.modules.insert(name.into(), module);
+    }
+
     pub fn declare_sort(
         &mut self,
         name: impl Into<Symbol>,
@@ -493,13 +527,17 @@ impl EGraph {
         for s in &decl.schema.input {
             input.push(match self.sorts.get(s) {
                 Some(sort) => sort.clone(),
-                None => return Err(Error::TypeError(TypeError::Unbound(*s))),
+                None => return Err(Error::TypeError(TypeError::UnboundConst(*s))),
             })
         }
 
         let output = match self.sorts.get(&decl.schema.output) {
             Some(sort) => sort.clone(),
-            None => return Err(Error::TypeError(TypeError::Unbound(decl.schema.output))),
+            None => {
+                return Err(Error::TypeError(TypeError::UnboundConst(
+                    decl.schema.output,
+                )))
+            }
         };
 
         let merge = if let Some(merge_expr) = &decl.merge {
@@ -564,8 +602,10 @@ impl EGraph {
         }
     }
 
-    pub fn print_function(&mut self, sym: Symbol, n: usize) -> Result<String, Error> {
-        let f = self.functions.get(&sym).ok_or(TypeError::Unbound(sym))?;
+    pub fn print_function(&mut self, sym: ScopedIdent, n: usize) -> Result<String, Error> {
+        let f = self
+            .get_function(&sym)
+            .ok_or(TypeError::Unbound(sym.clone()))?;
         let schema = f.schema.clone();
         let nodes = f
             .nodes
@@ -615,8 +655,10 @@ impl EGraph {
         Ok(buf)
     }
 
-    pub fn print_size(&self, sym: Symbol) -> Result<String, Error> {
-        let f = self.functions.get(&sym).ok_or(TypeError::Unbound(sym))?;
+    pub fn print_size(&self, sym: ScopedIdent) -> Result<String, Error> {
+        let f = self
+            .get_function(&sym)
+            .ok_or(TypeError::Unbound(sym.clone()))?;
         Ok(format!("Function {} has size {}", sym, f.nodes.len()))
     }
 
@@ -877,6 +919,17 @@ impl EGraph {
                 self.declare_function(&fdecl)?;
                 format!("Declared function {}.", fdecl.name)
             }
+            Command::Module { name, commands } => {
+                // Or a clone of self instead of default?
+                // Or add clone of self as a submodule?
+                // Should we be making a distinction between "Egraph" and "DB"/"Module"
+                let mut egraph = Self::default();
+                for command in commands {
+                    egraph.run_command(command, true);
+                }
+                self.declare_module(name, egraph);
+                format!("Declared module {name}.")
+            }
             Command::Rule(rule) => {
                 let name = self.add_rule(rule)?;
                 format!("Declared rule {name}.")
@@ -1053,12 +1106,15 @@ impl EGraph {
                     };
 
                     let mut exprs: Vec<Expr> = str_buf.iter().map(|&s| parse(s)).collect();
-
+                    let sident = ScopedIdent {
+                        ident: name,
+                        scope: vec![],
+                    };
                     actions.push(if is_unit {
-                        Action::Expr(Expr::Call(name, exprs))
+                        Action::Expr(Expr::Call(sident, exprs))
                     } else {
                         let out = exprs.pop().unwrap();
-                        Action::Set(name, exprs, out)
+                        Action::Set(sident, exprs, out)
                     });
                 }
                 self.eval_actions(&actions)?;

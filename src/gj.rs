@@ -244,7 +244,7 @@ impl EGraph {
     fn make_trie_access(
         &self,
         var: Symbol,
-        atom: &Atom<Symbol>,
+        atom: &Atom<ScopedIdent>,
         timestamp_range: Range<u32>,
     ) -> TrieAccess {
         let column = atom
@@ -253,7 +253,7 @@ impl EGraph {
             .position(|arg| arg == &AtomTerm::Var(var))
             .unwrap();
 
-        let function = &self.functions[&atom.head];
+        let function = self.get_function(&atom.head).unwrap();
 
         let mut constraints = vec![];
         for (i, t) in atom.args.iter().enumerate() {
@@ -303,7 +303,7 @@ impl EGraph {
         let relation_sizes: Vec<usize> = atoms
             .iter()
             .zip(timestamp_ranges)
-            .map(|(atom, range)| self.functions[&atom.head].get_size(range))
+            .map(|(atom, range)| self.get_function(&atom.head).unwrap().get_size(range))
             .collect();
 
         if relation_sizes.iter().any(|&s| s == 0) {

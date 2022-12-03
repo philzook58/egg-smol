@@ -20,7 +20,11 @@ pub enum TypeError {
     #[error("Tried to unify too many literals: {}", ListDisplay(.0, "\n"))]
     TooManyLiterals(Vec<Literal>),
     #[error("Unbound symbol {0}")]
-    Unbound(Symbol),
+    Unbound(ScopedIdent),
+    #[error("Unbound variable {0}")]
+    UnboundVar(Symbol),
+    #[error("Unbound const {0}")]
+    UnboundConst(Symbol), // TODO: I am suspicious needing this is indicating something is wrong
     #[error("Undefined sort {0}")]
     UndefinedSort(Symbol),
     #[error("Function already bound {0}")]
@@ -30,7 +34,10 @@ pub enum TypeError {
     #[error("Failed to infer a type for: {0}")]
     InferenceFailure(Expr),
     #[error("No matching primitive for: ({op} {})", ListDisplay(.inputs, " "))]
-    NoMatchingPrimitive { op: Symbol, inputs: Vec<Symbol> },
+    NoMatchingPrimitive {
+        op: ScopedIdent,
+        inputs: Vec<Symbol>,
+    },
     #[error("Variable {0} was already defined")]
     AlreadyDefined(Symbol),
 }
@@ -46,7 +53,7 @@ pub struct Context<'a> {
 
 #[derive(Hash, Eq, PartialEq)]
 enum ENode {
-    Func(Symbol, Vec<Id>),
+    Func(ScopedIdent, Vec<Id>),
     Prim(Primitive, Vec<Id>),
     Literal(Literal),
     Var(Symbol),
@@ -81,7 +88,7 @@ impl<T: std::fmt::Display> std::fmt::Display for Atom<T> {
 
 #[derive(Default, Debug, Clone)]
 pub struct Query {
-    pub atoms: Vec<Atom<Symbol>>,
+    pub atoms: Vec<Atom<ScopedIdent>>,
     pub filters: Vec<Atom<Primitive>>,
 }
 
@@ -167,7 +174,10 @@ impl<'a> Context<'a> {
             match node {
                 ENode::Func(f, ids) => {
                     let args = ids.iter().chain([id]).map(get_leaf).collect();
-                    query.atoms.push(Atom { head: *f, args });
+                    query.atoms.push(Atom {
+                        head: (*f).clone(),
+                        args,
+                    });
                 }
                 ENode::Prim(p, ids) => {
                     let args = ids.iter().chain([id]).map(get_leaf).collect();
@@ -305,7 +315,7 @@ impl<'a> Context<'a> {
                 let ty = if let Some(ty) = self.types.get(sym) {
                     Some(ty.clone())
                 } else {
-                    self.errors.push(TypeError::Unbound(*sym));
+                    self.errors.push(TypeError::UnboundVar(*sym));
                     None
                 };
                 (self.add_node(ENode::Var(*sym)), ty)
@@ -315,7 +325,7 @@ impl<'a> Context<'a> {
                 (self.add_node(ENode::Literal(lit.clone())), Some(t))
             }
             Expr::Call(sym, args) => {
-                if let Some(f) = self.egraph.functions.get(sym) {
+                if let Some(f) = self.egraph.get_function(sym) {
                     if f.schema.input.len() != args.len() {
                         self.errors.push(TypeError::Arity {
                             expr: expr.clone(),
@@ -329,8 +339,8 @@ impl<'a> Context<'a> {
                         .map(|(arg, ty)| self.check_query_expr(arg, ty.clone()))
                         .collect();
                     let t = f.schema.output.clone();
-                    (self.add_node(ENode::Func(*sym, ids)), Some(t))
-                } else if let Some(prims) = self.egraph.primitives.get(sym) {
+                    (self.add_node(ENode::Func((*sym).clone(), ids)), Some(t))
+                } else if let Some(prims) = self.egraph.get_primitive(sym) {
                     let (ids, arg_tys): (Vec<Id>, Vec<Option<ArcSort>>) =
                         args.iter().map(|arg| self.infer_query_expr(arg)).unzip();
 
@@ -343,14 +353,14 @@ impl<'a> Context<'a> {
                             }
                         }
                         self.errors.push(TypeError::NoMatchingPrimitive {
-                            op: *sym,
+                            op: (*sym).clone(),
                             inputs: arg_tys.iter().map(|t| t.name()).collect(),
                         });
                     }
 
                     (self.unionfind.make_set(), None)
                 } else {
-                    self.errors.push(TypeError::Unbound(*sym));
+                    self.errors.push(TypeError::Unbound((*sym).clone()));
                     (self.unionfind.make_set(), None)
                 }
             }
@@ -377,20 +387,20 @@ impl<'a> ActionChecker<'a> {
                 Ok(())
             }
             Action::Set(f, args, val) => {
-                let fake_call = Expr::Call(*f, args.clone());
+                let fake_call = Expr::Call((*f).clone(), args.clone());
                 let (_, ty) = self.infer_expr(&fake_call)?;
                 let fake_instr = self.instructions.pop().unwrap();
                 assert!(matches!(fake_instr, Instruction::CallFunction(..)));
                 self.check_expr(val, ty)?;
-                self.instructions.push(Instruction::Set(*f));
+                self.instructions.push(Instruction::Set((*f).clone()));
                 Ok(())
             }
             Action::Delete(f, args) => {
-                let fake_call = Expr::Call(*f, args.clone());
+                let fake_call = Expr::Call((*f).clone(), args.clone());
                 let (_, _ty) = self.infer_expr(&fake_call)?;
                 let fake_instr = self.instructions.pop().unwrap();
                 assert!(matches!(fake_instr, Instruction::CallFunction(..)));
-                self.instructions.push(Instruction::DeleteRow(*f));
+                self.instructions.push(Instruction::DeleteRow((*f).clone()));
                 Ok(())
             }
             Action::Union(a, b) => {
@@ -434,11 +444,11 @@ impl<'a> ExprChecker<'a> for ActionChecker<'a> {
             self.instructions.push(Instruction::Load(Load::Subst(i)));
             Ok(((), ty.clone()))
         } else {
-            Err(TypeError::Unbound(sym))
+            Err(TypeError::UnboundVar(sym))
         }
     }
 
-    fn do_function(&mut self, f: Symbol, _args: Vec<Self::T>) -> Self::T {
+    fn do_function(&mut self, f: ScopedIdent, _args: Vec<Self::T>) -> Self::T {
         self.instructions.push(Instruction::CallFunction(f));
     }
 
@@ -452,7 +462,7 @@ trait ExprChecker<'a> {
     type T;
     fn egraph(&self) -> &'a EGraph;
     fn do_lit(&mut self, lit: &Literal) -> Self::T;
-    fn do_function(&mut self, f: Symbol, args: Vec<Self::T>) -> Self::T;
+    fn do_function(&mut self, f: ScopedIdent, args: Vec<Self::T>) -> Self::T;
     fn do_prim(&mut self, prim: Primitive, args: Vec<Self::T>) -> Self::T;
 
     fn infer_var(&mut self, var: Symbol) -> Result<(Self::T, ArcSort), TypeError>;
@@ -502,7 +512,7 @@ trait ExprChecker<'a> {
                 self.infer_var(*sym)
             }
             Expr::Call(sym, args) => {
-                if let Some(f) = self.egraph().functions.get(sym) {
+                if let Some(f) = self.egraph().get_function(sym) {
                     if f.schema.input.len() != args.len() {
                         return Err(TypeError::Arity {
                             expr: expr.clone(),
@@ -515,9 +525,9 @@ trait ExprChecker<'a> {
                         ts.push(self.check_expr(arg, expected.clone())?);
                     }
 
-                    let t = self.do_function(*sym, ts);
+                    let t = self.do_function((*sym).clone(), ts);
                     Ok((t, f.schema.output.clone()))
-                } else if let Some(prims) = self.egraph().primitives.get(sym) {
+                } else if let Some(prims) = self.egraph().get_primitive(sym) {
                     let mut ts = Vec::with_capacity(args.len());
                     let mut tys = Vec::with_capacity(args.len());
                     for arg in args {
@@ -534,11 +544,11 @@ trait ExprChecker<'a> {
                     }
 
                     Err(TypeError::NoMatchingPrimitive {
-                        op: *sym,
+                        op: (*sym).clone(),
                         inputs: tys.iter().map(|ty| ty.name()).collect(),
                     })
                 } else {
-                    Err(TypeError::Unbound(*sym))
+                    Err(TypeError::Unbound((*sym).clone()))
                 }
             }
         }
@@ -555,10 +565,10 @@ enum Load {
 enum Instruction {
     Literal(Literal),
     Load(Load),
-    CallFunction(Symbol),
+    CallFunction(ScopedIdent),
     CallPrimitive(Primitive, usize),
-    DeleteRow(Symbol),
-    Set(Symbol),
+    DeleteRow(ScopedIdent),
+    Set(ScopedIdent),
     Union(usize),
     Panic(String),
     Pop,
@@ -644,7 +654,8 @@ impl EGraph {
                     Load::Subst(idx) => stack.push(subst[*idx]),
                 },
                 Instruction::CallFunction(f) => {
-                    let function = self.functions.get_mut(f).unwrap();
+                    let egraph = self.resolve_scope_mut(&f.scope).unwrap();
+                    let function = egraph.functions.get_mut(&f.ident).unwrap();
                     let new_len = stack.len() - function.schema.input.len();
                     let values = &stack[new_len..];
 
@@ -657,8 +668,8 @@ impl EGraph {
                     let value = if let Some(out) = function.nodes.get(values) {
                         out.value
                     } else if make_defaults {
-                        let ts = self.timestamp;
-                        self.saturated = false;
+                        let ts = egraph.timestamp;
+                        egraph.saturated = false;
                         let out = &function.schema.output;
                         match function.decl.default.as_ref() {
                             None if out.name() == "Unit".into() => {
@@ -666,7 +677,7 @@ impl EGraph {
                                 Value::unit()
                             }
                             None if out.is_eq_sort() => {
-                                let id = self.unionfind.make_set();
+                                let id = egraph.unionfind.make_set();
                                 let value = Value::from_id(out.name(), id);
                                 function.insert(values.into(), value, ts);
                                 value
@@ -702,27 +713,30 @@ impl EGraph {
                 }
                 Instruction::Set(f) => {
                     assert!(make_defaults);
-                    let function = self.functions.get_mut(f).unwrap();
+                    let egraph = self.resolve_scope_mut(&f.scope).unwrap();
+                    let function = egraph.functions.get_mut(&f.ident).unwrap();
                     let new_value = stack.pop().unwrap();
                     let new_len = stack.len() - function.schema.input.len();
                     let args = &stack[new_len..];
-                    let old_value = function.insert(args.into(), new_value, self.timestamp);
+                    let old_value = function.insert(args.into(), new_value, egraph.timestamp);
 
                     // if the value does not exist or the two values differ
                     if old_value.is_none() || old_value != Some(new_value) {
-                        self.saturated = false;
+                        egraph.saturated = false;
                     }
 
                     if let Some(old_value) = old_value {
                         if new_value != old_value {
-                            self.saturated = false;
+                            egraph.saturated = false;
                             let merged: Value = match function.merge.clone() {
                                 MergeFn::AssertEq => panic!("No error for this yet"),
-                                MergeFn::Union => self.unionfind.union_values(old_value, new_value),
+                                MergeFn::Union => {
+                                    egraph.unionfind.union_values(old_value, new_value)
+                                }
                                 MergeFn::Expr(merge_prog) => {
                                     let values = [old_value, new_value];
                                     let old_len = stack.len();
-                                    self.run_actions(stack, &values, &merge_prog, true)?;
+                                    egraph.run_actions(stack, &values, &merge_prog, true)?;
                                     let result = stack.pop().unwrap();
                                     stack.truncate(old_len);
                                     result
@@ -730,8 +744,8 @@ impl EGraph {
                             };
                             // re-borrow
                             let args = &stack[new_len..];
-                            let function = self.functions.get_mut(f).unwrap();
-                            function.insert(args.into(), merged, self.timestamp);
+                            let function = egraph.functions.get_mut(&f.ident).unwrap();
+                            function.insert(args.into(), merged, egraph.timestamp);
                         }
                     }
                     stack.truncate(new_len)
@@ -759,7 +773,7 @@ impl EGraph {
                     stack.pop().unwrap();
                 }
                 Instruction::DeleteRow(f) => {
-                    let function = self.functions.get_mut(f).unwrap();
+                    let function = self.get_function_mut(f).unwrap();
                     let new_len = stack.len() - function.schema.input.len();
                     let args = &stack[new_len..];
                     let old_value = function.nodes.remove(args);

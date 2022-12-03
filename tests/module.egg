@@ -1,0 +1,11 @@
+
+(module foo (
+    (relation biz (i64))
+    (datatype bar)
+))
+
+; Don't have types yet.
+;(function x () foo.bar)
+(foo.biz 10)
+(foo.biz 20)
+(print foo.biz)

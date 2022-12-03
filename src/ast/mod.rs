@@ -47,6 +47,10 @@ pub enum Command {
     },
     Sort(Symbol, Symbol, Vec<Expr>),
     Function(FunctionDecl),
+    Module {
+        name: Symbol,
+        commands: Vec<Command>,
+    },
     Define {
         name: Symbol,
         expr: Expr,
@@ -65,8 +69,8 @@ pub enum Command {
     Check(Fact),
     ClearRules,
     Clear,
-    Print(Symbol, usize),
-    PrintSize(Symbol),
+    Print(ScopedIdent, usize),
+    PrintSize(ScopedIdent),
     Input {
         name: Symbol,
         file: String,
@@ -132,8 +136,8 @@ impl Display for Fact {
 #[derive(Clone, Debug)]
 pub enum Action {
     Let(Symbol, Expr),
-    Set(Symbol, Vec<Expr>, Expr),
-    Delete(Symbol, Vec<Expr>),
+    Set(ScopedIdent, Vec<Expr>, Expr),
+    Delete(ScopedIdent, Vec<Expr>),
     Union(Expr, Expr),
     Panic(String),
     Expr(Expr),

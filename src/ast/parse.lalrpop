@@ -22,7 +22,7 @@ List<T>: Vec<T> = {
 }
 
 Comma<T>: Vec<T> = {
-    <mut v:(<T> ",")*> <e:T?> => match e {
+    <mut v:(<T> ",")*> <e:T> => match e {
         None => v,
         Some(e) => {
             v.push(e);
@@ -39,6 +39,7 @@ Command: Command = {
         Command::Function(FunctionDecl { name, schema, merge, default, cost })
     },
     "(" "relation" <name:Ident> <types:List<Type>> ")" => Command::Function(FunctionDecl::relation(name, types)),
+    "(" "module" <name:Ident> <commands:List<Command>> ")" => Command::Module {name, commands},
     "(" "rule" <body:List<Fact>> <head:List<Action>> ")" => Command::Rule(Rule { head, body }),
     "(" "rewrite" <lhs:Expr> <rhs:Expr>
         <conditions:(":when" <List<Fact>>)?>
@@ -56,8 +57,8 @@ Command: Command = {
     "(" "query" <List<Fact>> ")" => Command::Query(<>),
     "(" "push" <UNum?> ")" => Command::Push(<>.unwrap_or(1)),
     "(" "pop" <UNum?> ")" => Command::Pop(<>.unwrap_or(1)),
-    "(" "print" <sym:Ident> <n:UNum?> ")" => Command::Print(sym, n.unwrap_or(10)),
-    "(" "print-size" <sym:Ident> ")" => Command::PrintSize(sym),
+    "(" "print" <sym:ScopedIdent> <n:UNum?> ")" => Command::Print(sym, n.unwrap_or(10)),
+    "(" "print-size" <sym:ScopedIdent> ")" => Command::PrintSize(sym),
     "(" "input" <name:Ident> <file:String> ")" => Command::Input { name, file },
 }
 
@@ -67,8 +68,8 @@ Cost: Option<usize> = {
 }
 
 NonLetAction: Action = {
-    "(" "set" "(" <f: Ident> <args:Expr*> ")" <v:Expr> ")" => Action::Set ( f, args, v ),
-    "(" "delete" "(" <f: Ident> <args:Expr*> ")" ")" => Action::Delete ( f, args),
+    "(" "set" "(" <f: ScopedIdent> <args:Expr*> ")" <v:Expr> ")" => Action::Set ( f, args, v ),
+    "(" "delete" "(" <f: ScopedIdent> <args:Expr*> ")" ")" => Action::Delete ( f, args),
     "(" "union" <e1:Expr> <e2:Expr> ")" => Action::Union(<>),
     "(" "panic" <msg:String> ")" => Action::Panic(msg),
     <e:CallExpr> => Action::Expr(e),
@@ -97,7 +98,8 @@ Expr: Expr = {
     <Literal> => Expr::Lit(<>),
     <Ident> => Expr::Var(<>),
     <CallExpr> => <>,
-    "(" <head:PrimitiveSymbol> <tail:(Expr)+> ")" => Expr::Call(head, tail),
+  // TODO add operators to allowed symbols in identifiers
+  //  "(" <head:PrimitiveSymbol> <tail:(Expr)+> ")" => Expr::Call(head, tail),
 };
 
 Literal: Literal = {
@@ -107,7 +109,7 @@ Literal: Literal = {
 }
 
 CallExpr: Expr = {
-    "(" <head:Ident> <tail:(Expr)*> ")" => Expr::Call(head, tail),
+    "(" <head:ScopedIdent> <tail:(Expr)*> ")" => Expr::Call(head, tail),
 }
 
 ExprList: Vec<Expr> = { "(" <sexps:(Expr)*> ")" => sexps }
@@ -126,7 +128,13 @@ Bool: bool = {
     "true" => true,
     "false" => false,
 }
-Ident: Symbol = <s:r"[[:alpha:]][\w-]*"> => s.parse().unwrap();
-PrimitiveSymbol: Symbol = <r"[-+*/!=<>&|^/%]+"> => Symbol::from(<>);
+Scope: Symbol = {
+    <Ident> "."=> <>
+}
+ScopedIdent:ScopedIdent = {
+    <scope:Scope*> <ident:Ident> => ScopedIdent{ident, scope}
+}
+Ident: Symbol = <s:r"([[:alpha:]][\w-]*)|([-+*/!=<>&|^/%]+)"> => s.parse().unwrap();
+//PrimitiveSymbol: Symbol = <r"[-+*/!=<>&|^/%]+"> => Symbol::from(<>);
 SymString: Symbol = <r#""[^"]*""#> => Symbol::from(<>);
 String: String = <r#""[^"]*""#> => (<>).trim_matches('"').to_owned();

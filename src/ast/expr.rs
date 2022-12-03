@@ -43,16 +43,38 @@ impl Display for Literal {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct ScopedIdent {
+    pub ident: Symbol,
+    pub scope: Vec<Symbol>,
+}
+
+impl Display for ScopedIdent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for name in &self.scope {
+            write!(f, "{}.", name)?;
+        }
+        write!(f, "{}", self.ident)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Expr {
     Lit(Literal),
     Var(Symbol),
     // TODO make this its own type
-    Call(Symbol, Vec<Self>),
+    Call(ScopedIdent, Vec<Self>),
 }
 
 impl Expr {
     pub fn call(op: impl Into<Symbol>, children: impl IntoIterator<Item = Self>) -> Self {
-        Self::Call(op.into(), children.into_iter().collect())
+        // todo change signature of this function?
+        Self::Call(
+            ScopedIdent {
+                ident: op.into(),
+                scope: vec![],
+            },
+            children.into_iter().collect(),
+        )
     }
 
     pub fn lit(lit: impl Into<Literal>) -> Self {
@@ -93,6 +115,7 @@ impl Display for Expr {
             Expr::Lit(lit) => Display::fmt(lit, f),
             Expr::Var(var) => Display::fmt(var, f),
             Expr::Call(op, args) => {
+                // TODO: do better
                 write!(f, "({}", op)?;
                 for arg in args {
                     write!(f, " {}", arg)?;
