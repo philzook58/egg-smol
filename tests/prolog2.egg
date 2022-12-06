@@ -1,0 +1,123 @@
+; prolog interpreter
+
+(datatype State)
+(datatype Answer (True))
+(datatype UVar)
+(datatype Goal)
+(datatype GoalsList (Cons Goal GoalsList) (Nil))
+;(datatype Term (Term String i64 Args))
+(datatype Term (Term0 String) (Term1 String Term) (Term2 String Term Term)) ; (Var String)????
+
+(datatype Args (ConsArgs Term ) (Nil)) 
+
+
+
+
+(function interp (State) Result)
+
+
+(rewrite (interp (Nil)) (True))
+; for every Clause
+; g :- body becomes
+(rewrite (interp (Cons g gs)) (interp (append body gs))) 
+
+; I don't need to reify backtracking. Which is interesting.
+(rewrite (interp uf (Cons g gs)) (interp uf2 (append body gs))
+ :when ((
+    (clause g1 body)
+    (= True (unify (uf g g1) g g1))
+ ))
+)
+
+(rewrite (interp uf (Cons g gs)) (interp (unify g g1 uf) (append body gs))
+ :when ((
+    (clause g1 body)
+    (!= uf Fail) ; can't really count on this though. Maybe we can. Since we'll loop?
+    (!= g g1) ; hmm?
+ ))
+)
+
+(function unify (UF Goal Goal) OptionUF)
+(rule ((unify uf (Var a) b)) 
+    (union (apply uf (Var a)) (apply uf b))
+    True)
+
+(rule )
+
+(rewrite (unify uf (GAppend a b c) (GAppend a b c))
+    (unify (unify ((unify uf a a1) b b1) c c1)
+) 
+
+
+; The union find itself can be labelled by a sequence of unifications that derive it.
+; Is this a definition akin the the inference rule definition of unification
+; https://en.wikipedia.org/wiki/Unification_(computer_science)
+; Yes very much so.
+(function unify (Term Term))
+
+(datatype UF (ConsUnify Goal Goal UF) (NilUF) (FailUF))
+
+(rewrite (ConsUnify g g1 Fail) Fail)
+(rewrite (ConsUnify g g tl) tl) ; These are null unifications
+
+; (root NilUF x) is only equal to itself
+(rewrite (root (ConsUnify g g1 tl) a)
+    
+)
+
+(rewrite (consunify (GAppend a b c) (GAppend a b c) tl)
+    (cons (a a1 (cons b b1 (cons c c1 tl))))
+)
+
+(rewrite (unify (GSucc s) (GSuc s1) tl) (unify s s1 tl))
+(rewrite (unify GZero GZero tl) tl)
+(rewrite (unify (GSucc s) (GNil) tl) Fail)
+(rewrite (unify GZero (GSucc s) tl) Fail)
+
+; bidirectionality of unify
+(rewrite (unify g g1 tl) (unify g1 g tl))
+
+; The meat.
+(rewrite (root (unify a b tl) a) (root (unify a b tl) b))
+
+
+
+
+; demand
+(rule ((unify a b tl))
+    (define demand1 (root (unify a b tl) a))
+    (define demand2 (root (unify a b tl) b))
+    ; tail will already do this to itself?
+    ;(define demand3 (root tl a))
+    ;(define demand4 (root tl b))
+)
+
+
+; transference
+(rewrite (root (unify g g1 uf) a) (root (unify g g1 uf) b)
+ :when ((= (root uf a) (root uf b)))
+)
+
+; subsumption.
+(rewrite (unify a b tl) tl
+    :when ((= (root tl a) (root tl b)))
+)
+
+
+
+
+
+
+
+
+(rewrite (inter uf gs))
+
+
+(function query (GoalList) UF)
+; setup demand
+(rule (= r (query gs)) (define (interp empty_uf gs)))
+; pull out results.
+(rewrite (query gs) r
+    :when ((= (interp empty_uf gs) (Result r)))
+)
+;(interp (Cons mygoal Nil) (Result )

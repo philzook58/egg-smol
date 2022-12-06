@@ -1,0 +1,21 @@
+(datatype Expr (Add Expr Expr) (Neg Expr) (Num i64) (Var String))
+
+(rewrite (Add x y) (Add y x))
+
+; And the other direction
+(rewrite (Add (Add x y) z) (Add x (Add y z)))
+(rewrite (Neg (Add x y)) (Add (Neg x) (Neg y)))
+
+
+;variable isolation
+(rule ((= (Add x y) z))
+      ((union (Add z (Neg y)) x)))
+(rule ((= (Neg x) y))
+      ((union (Neg y) x)))
+(rewrite (Neg (Neg x)) x)
+
+; Literal propagation
+(rewrite (Add (Num x) (Num y)) (Num (+ x y)))
+(rewrite (Neg (Num n)) (Num (- n)))
+
+(rewrite (Add (Neg x) x) (Num 0))

@@ -1,0 +1,85 @@
+(datatype AExpr
+    (sqrt AExpr)
+    (sqr AExpr)
+    (Var String)
+    (Const Rational)
+)
+(datatype BExpr 
+    (lte AExpr AExpr)
+)
+(function ite (BExpr AExpr AExpr) AExpr) ; statement?
+
+; bottom up context types. 
+(datatype BCtx)
+(datatype ACtx 
+    (ATop)
+    (iteT BExpr ACtx AExpr)
+    (iteE BExpr AExpr ACtx)
+    (sqrtL ACtx)
+    (sqrL ACtx)
+    (lteL BCtx AExpr)
+    (lteR AExpr BCtx)
+)
+(function iteC (ACtx AExpr AExpr) BCtx)
+
+
+(datatype AExpr1
+    (sqrt1 ACtx AExpr1)
+    (sqr1 ACtx AExpr1)
+    (Var1 ACtx String)
+    (Const1 ACtx Rational)
+)
+(datatype BExpr1 ; statement?
+    (lte1 BCtx AExpr1 AExpr1)
+)
+(function ite1 (ACtx BExpr1 AExpr1 AExpr1) AExpr1)
+
+; These could be macros.
+; recursively tag adt with zipper context it appears in.
+(function ataggit (ACtx AExpr) AExpr1)
+(function btaggit (BCtx BExpr) BExpr1)
+(rewrite (ataggit ctx (sqrt x)) (sqrt1 ctx (ataggit (sqrtL ctx) x)))
+(rewrite (ataggit ctx (sqr x)) (sqr1 ctx (ataggit (sqrL ctx) x)))
+(rewrite (ataggit ctx (Var x)) (Var1 ctx x))
+(rewrite (ataggit ctx (Const x)) (Const1 ctx x))
+(rewrite (ataggit ctx (ite c t e)) (ite1 ctx (btaggit (iteC ctx t e) c) 
+                                         (ataggit (iteT c ctx e) t) 
+                                         (ataggit (iteE c t ctx) e) 
+))
+
+(rewrite (btaggit ctx (lte x y)) (lte1 ctx (ataggit (lteL ctx y) x) (ataggit (lteR x ctx) y)))
+
+
+; (untag )
+
+; Equivalence of contexts. Good idea or bad?
+; Why even bother creating these contexts except for uniformity?
+; This factors contexts down to what actually matters, which is basically ite nodes.
+(rewrite (sqrL ctx) ctx)
+(rewrite (sqrtL ctx) ctx) ;? Does Sqrt imply argument is nonzero? Kind of no, that's a question, not an answer.
+
+; The contexts that cross types are annoying.
+;(rewrite (iteC ctx x y) ctx) ; hmmmm. But they are equal? But this desn't type check
+; (rule (= ctx1 (iteC ctx x y)) (= ctx2 (iteC ctx x y))   ctx) ???
+(rule ((= ctx1 (lteL ctx y)) (= ctx2 (lteR x ctx))) ((union ctx1 ctx2)))
+; no, quite explicity no. (rule ((= ctx1 (iteT c ctx e)) (= ctx2 (iteE c t ctx))) ((union ctx1 ctx2)))
+
+; constants same in all contexts
+(rule ((= t1 (Const1 ctx x)) (= t2 (Const1 ctx2 x))) ((union t1 t2)))
+
+(function hi (ACtx String) Rational :merge (min old new))
+;(function hi (AExpr1) Rational)
+
+; How do I even write the rule that takes conditions from the ite and turns into analysis result?
+;(rule (= t (ite1 ctx1 (lte1 ctx2 e (Const1 ctx3 v)) t e) )
+;    (= (hi (iteT (untag ) ctx1 (untag e)) (untag e)) v)
+;)
+
+(define zero (Const (rational 0 1)))
+(define x (Var "x"))
+(define t1 (ataggit (ATop) (ite (lte x zero) (sqrt (sqr x)) x)))
+(run 100)
+
+; sqrt (sqr x) = x. 
+; This is is observational equivalence. In the context where you only observe the value of this expression
+; when x > 0, then this is true.

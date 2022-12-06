@@ -1,0 +1,50 @@
+; https://www.philipzucker.com/notes-on-synthesis-and-equation-proving-for-catlab-jl/
+; https://www.philipzucker.com/theorem-proving-for-catlab-2-lets-try-z3-this-time-nope/
+; https://www.philipzucker.com/metatheory-progress/
+; https://www.philipzucker.com/rust-category/
+(datatype Ob)
+(datatype Morph
+    (Id Ob)
+)
+
+(datatype Type
+    (Ob)
+    (Hom Ob Ob)
+)
+
+
+
+
+
+; partial function
+; but even more so, no rule produces ill typed comp as an invariant.
+(function comp (Morph Morph) Morph)
+
+(function type-of-morph (Morph) Type)
+
+
+
+(rule
+    ((= f (Id a)))
+    ((set (type-of-morph f) (Hom a a)))
+)
+; (rewrite (type-of-morph (Id a)) (Hom a a)) subsumed
+
+;(rule ((= fg (comp f g))
+;       (= ty (type-of-morph fg))
+;       (= (Hom a b) (type-of-morph f))
+;       (= (Hom b c) (type-of-morph g)))
+;       ((set (type-of-morph fg) (Hom a c)))
+;)
+; alternatively use Max's trick (define (comp-type (Hom a b) (Hom b c)) (Hom a c))
+(function comp-type (Type Type) Type)
+(rewrite (comp-type (Hom a b) (Hom b c)) (Hom a c))
+(rewrite (type-of-morph (comp f g)) (comp-type (type-of-morph f) (type-of-morph g)))
+
+(rule
+    ((= fg (comp f g)))
+    ((define demand (type-of-morph fg))) ; (define demand2 (type-of-morph f)) )
+)
+
+(rewrite (comp f (Id a)) f)
+(rewrite (comp (Id a) f) f)

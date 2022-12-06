@@ -1,0 +1,34 @@
+; A metainterpreter
+; Rules. 
+
+(datatype Egglog
+    (Rule )
+
+)
+
+(datatype Pattern
+    (Pat0 String Pattern)
+    (Var String)
+)
+
+(datatype Action
+    (Union )
+    (Set )
+    ( )
+
+)
+
+
+(function match (Pattern Env) OptEnv)
+
+(rewrite (match (Var a) e) )
+
+(sort Env (Map String Expr))
+(datatype OptEnv (Some Env) (None))
+
+; egglog command:
+; (Union a b uf) is a reflection of egglog.
+; egglog metainterpeter makes first class UF hum?
+
+
+; typing egglog in egglog

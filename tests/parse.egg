@@ -1,0 +1,7 @@
+(check (= (concat "hello " "world") "hello world"))
+(check (contains "bartyflartfast" "flart"))
+(check (is-ascii "bartyflartfast"))
+
+(datatype Sexp (Cons Sexp Sexp) (Nil))
+(function parse (Symbol) Sexp)
+(function (parse "(" + s + ")" (List (parse s)))

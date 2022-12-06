@@ -1,0 +1,28 @@
+
+; difference lists still work. This can only be done once though.
+(datatype List (Cons i64 List) (Nil))
+
+(function tl (i64) List)
+
+(define l1 (Cons 1 (Cons 2 (Cons 3 (tl 0)))))
+
+(union (tl 0) (Cons 4 Nil))
+
+(datatype Diff (Diff List List))
+
+(rewrite (append (Diff l1 tl1) (Diff l2 tl2)) 
+    (union tl1 l2)
+    (Diff l1 tl2))
+; rebuilding might still be O(N).
+; How can I really know I called append on the right stuff?
+
+(rewrite (append (Diff l1 tl1) (Diff l2 tl2)) 
+    (Diff l1 tl2)
+    :when ((= tl1 l2))) ; This is correct. The other one is super fishy.
+
+; we've already memoized append. New apends aren't that big a deal?
+
+(rewrite (append (Diff l1 (tl n)) (Diff l2 tl2)) 
+    ((union (tl n) l2)
+    (delete (tl n))
+    (Diff l1 tl2)))

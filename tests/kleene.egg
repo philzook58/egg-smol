@@ -1,0 +1,15 @@
+; https://github.com/mgree/katbury
+(datatype Bool 
+        (False)
+        (True)
+        (~ KAT)
+        (| KAT KAT)
+        (& KAT KAT)
+)
+
+(datatype KAT
+    (test Bool)
+    (par KAT KAT)
+    (seq KAT KAT)
+    (* KAT)
+)

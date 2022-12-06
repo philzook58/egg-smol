@@ -1,0 +1,109 @@
+(datatype Interval 
+    (Interval Rational Rational)
+)
+
+(datatype Real
+    (Var String)
+    (Lit Rational)
+    (Rnd Real)
+    (Mul Real Real)
+    (Add Real Real)
+    (Neg Real)
+    (Sub Real Real)
+    (Abs Real)
+)
+
+(relation real (Real))
+
+(function add (Interval Interval) Interval)
+(rewrite (add (Interval lx ux) (Interval ly uy))  (Interval (+ lx ly) (+ ux uy)))
+
+(function mul (Interval Interval) Interval)
+(rewrite (mul (Interval lx ux) (Interval ly uy))  (Interval (+ lx ly) (+ ux uy)))
+
+(function negi (Interval) Interval)
+(rewrite (negi (Interval lx ux))  (Interval (neg ux) (neg lx)))
+;(function mul (Interval Interval) Interval)
+
+(function meet (Interval Interval) Interval)
+(rewrite (meet (Interval lx ux) (Interval ly uy)) (Interval (max lx ly) (min ux uy)))
+
+(function BND (Real) Interval :merge (meet old new))
+(function ABS (Real) Interval :merge (meet old new))
+(function REL (Real Real) Interval :merge (meet old new))
+(relation NZR (Real))
+
+
+(define r-zero (rational 0 1))
+(define r-one (rational 1 1))
+(define i-zero (Interval r-zero r-zero))
+
+; https://github.com/herbie-fp/herbie/blob/oflatt/egg-smol/egg-herbie/src/herbie.egg
+; https://gappa.gitlabpages.inria.fr/gappa/theorems.html
+
+;eql_of_cst
+(rule ((= (BND b) (BND a))) 
+     ((union a b)))
+
+; rel refl
+(rule ((real a)) ((set (REL a a) i-zero)))
+
+; eql_trans and eql_refl are automatic
+
+; neg
+(rule ((= (BND a) i)) ((set (BND (Neg a)) (negi i))))
+
+;sqrt
+
+;sub_refl
+(rewrite (Sub a a) (Lit r-zero))
+
+;div_refl
+(rewrite (Div a a) (Lit r-one) :when ((NZR a)))
+
+;square
+(rewrite (BND (Mul a a)) (mul (ABS a) (ABS a))) 
+
+;square_rev
+
+
+
+
+
+(rewrite (BND (Add x y)) (add (BND x) (BND y)))
+(rewrite (BND (Lit n)) (Interval n n))
+
+;(define t (BND (Add (Lit (rational 1 1)) (Lit (rational 2 1)))))
+;(set (BND (Var "x")) (Interval (rational 0 1) (rational 1 1)))
+;(set (BND (Var "x")) (Interval (rational 1 1) (rational 2 1)))
+;(set (BND (Var "y")) (Interval (rational 0 1) (rational 1 1)))
+;(define t2 (BND (Add (Var "y") (Lit (rational 42 1)))))
+;(run 10)
+;(check (= t (Interval (rational 3 1) (rational 3 1))))
+;(check (= (BND (Var "x")) (Interval (rational 1 1) (rational 1 1))))
+;(check (= t2 ()))
+
+
+
+
+(rule
+    (
+     (= (Add x y) t)
+     (= (BND t) it)
+     (= (BND x) ix)
+     (= (BND y) iy)
+    )
+    (
+     (set (BND t) (add ix iy))
+    )
+)
+
+(rule
+     ((= (Add x y) t)
+     (= (BND (Add x y)) it))
+     ( 
+        (define ix (BND x))
+        (define iy (BND y))
+        (set (BND t) (add ix iy))
+     )
+)

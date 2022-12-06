@@ -1,0 +1,9 @@
+(datatype rel
+    (And rel rel)
+
+)
+
+
+(rewrite (And a b) (And b a))
+
+; mccarthy 91

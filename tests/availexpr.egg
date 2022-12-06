@@ -1,0 +1,82 @@
+(datatype Var (Var String))
+
+(datatype AExpr
+    (AVar Var)
+    (Lit i64)
+    ;(Add Expr Expr)
+    (Add Var Var)
+    (Mul Var Var)
+)
+(datatype BExpr
+    (Var String)
+    (Lit i64)
+    (Add Expr Expr)
+)
+
+(datatype Imp
+    (Set Var Expr)
+    (ITE Expr Imp Imp)
+    (Seq Imp Imp)
+    (Skip)
+)
+
+
+(function begin4 (Imp Imp Imp Imp) Imp)
+(rewrite (begin4 s1 s2 s3 s4) (Seq s1 (Seq s2 (Seq s3 s4))))
+
+(define x (Var "x"))
+(define y (Var "y"))
+(define z (Var "z"))
+; Figure 1.2 or Nielson Nieslon
+(define fact 
+    (begin4 
+        (Set y (AVar x))
+        (Set z (Lit 1))
+        (While (Lte (AVar y) (Lit 1))
+            (Set z (Mul z y))
+            (Set y (Add y (Lit -1)))
+        )
+        (Set y 0)
+    )
+)
+; (Map Var Unit) ; freevar set. empty, insert, get
+(datatype ImpCtx 
+    (LSeq Imp)  ; (Seq - x) in left side of seq
+    (RSeq Imp)  ; (Seq x -)
+    (Then Expr Imp) ; in then branch
+    (Else Expr Imp)
+    (TopCtx)
+)
+
+(function fv (AExpr) (Map Var Unit))
+(rewrite (Lit n) (empty))
+(rewrite (AVar x) (insert x (empty)))
+(rewrite (Add x y) (insert x (insert y (empty))))
+(rewrite (Mul x y) (insert x (insert y (empty))))
+
+
+(datatype ImpPt (ImpPt ImpCtx Imp))
+; Same old design space
+; Blks vs Imp
+
+
+
+;(Map String Blk)
+
+;(datatype Blk 
+;    (Blk String)
+;    (Seq Insn Blk)
+;    )
+;(datatype Insn 
+;    (Jmp Blk)
+;    (Add Var Var Var) ; x := y + z
+;    (BLE Var)
+;)
+
+;(relation gen Blk Expr)
+;(relation free Blk Var)
+;(relation kill Blk Expr)
+;(relation next Blk Blk)
+;(relation notavail_entry Blk Expr)
+;(relation notavail_exit Blk Expr)
+

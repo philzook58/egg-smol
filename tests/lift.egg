@@ -1,0 +1,15 @@
+(datatype BitVec64
+    (bvadd BitVec64 BitVec64)
+    (bvsub BitVec64 BitVec64)
+    (bvmul BitVec64 BitVec64)
+    (bvshl BitVec64 BitVec64)
+    (bvshr BitVec64 BitVec64)
+    (Lit i64)
+    (Var String)
+)
+
+(rewrite (bvadd (Lit x) (Lit y)) (Lit (+ x y)))
+(rewrite (bvsub (Lit x) (Lit y)) (Lit (- x y)))
+(rewrite (bvmul (Lit x) (Lit y)) (Lit (* x y)))
+(rewrite (bvshl (Lit x) (Lit y)) (Lit (<< x y)))
+(rewrite (bvshr (Lit x) (Lit y)) (Lit (>> x y)))
