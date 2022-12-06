@@ -1,0 +1,113 @@
+
+; Prolog modulo equality.
+; This is prolog that supports only fully grounded queries.
+; In that sense it is not a prolog at all
+
+;Egglog can emulate prolog. There is no question there. Egglog has pure functional programming as a subsystem, and you can write a purely functional prolog interpreter.
+
+;A measure I think of how close egglog is to prolog is to attempt to build as shallow and simple interpreter of prolog as possible.
+
+;In order to pinpoint where I think Egglog fails to capture the essence of prolog, despite having horn clauses and union find, I wrote one kind of crippled prolog interpreter. I'll note that it is very, very difficult if not impossible to even shallowly encode Harrop clauses or lambda terms into a regular prolog without essentially writing an interpreter. It is a constant temptation to attempt to use one notion of variable for another notion and it rarely works out well.
+
+;The interpreter carries a goal stack. Egglog inherits from datalog that it is pattern matching based and not unification based like prolog. It is difficult to see how to shallowly embed unification to the heads of rules.
+
+;When you write a prolog interpreter in prolog https://www.metalevel.at/acomip/, you can borrow so many capabilities of the host language that it is trivial. You can make each of the capabilities in turn more or less explicit depending on how you want to modify the stock behavior.
+
+;The two main things (the essential components of prolog) to try to borrow from egglog are unification and nondeterminism.
+
+;Basically, you can't borrow both in egglog to achieve prolog behavior. You can pick one, maybe.
+
+;Borrowing egglog nondeterminism, you can use non deterministic rewrite rules in the interpreter picking what search path to go down. However, now if you ever unify something it happens across all branches, which is incorrect. You can perhaps fix this by carrying around a first class union find in the interpreter.
+
+;If you instead make the nondeterminism explicit by carrying around a choice point stack in the interpreter, you can perhaps use skolemization and egglog union to do some aspects of unification, although the actual unification algorithm will still need to be encoded in further rules.
+
+;Note that that syntactic Prolog variables X are not just one semantic thing.
+
+;Prolog consists of a query pass working backward from goals, searching for proofs. Upon finding the proof, there is an implicit forward pass returning an answer (something like a coroutining).
+
+;A unification variable in a goal/query is attempting to find a proof to an existential question.
+;A unification variable in the answer is the assertion of a universally quantified statement.
+;A unification variable in the head of a program clause is a universal quantified variable for that axiom.
+;A unification variable appearing only in the body of a program clause is a existentially quantified variable.
+
+;Datalog has no built in notion of query. It only has the forward pass of answers. Magic set can encode queries, but encoding is not shallow native support.
+
+;Egglog variables tend to feel mostly like existential answers
+;Egglog can kind of sort of assert universal facts by deriving them about fresh constants, but this is fishy, and then you cannot use those facts without a substitution operation, which is a fairly deep encoding at that point
+
+
+(datatype Term
+    (TSucc Term)
+    (TZero)
+)
+(datatype Goal
+    (GAdd Term Term Term)
+    (GLTE Term Term)
+    ; GAppend
+)
+(datatype GoalList (Cons Goal GoalList) (Nil))
+(datatype Proof (True))
+
+(function append (GoalList GoalList) GoalList)
+(rewrite (append Nil l) l)
+(rewrite (append (Cons g gs) l) (Cons g (append gs l)))
+
+(function resolve (GoalList) Proof)
+
+
+; The head-body relation could be inlined perhaps into it's use site
+(relation head-body (Goal GoalList))
+
+(set (resolve Nil) True)
+; We reuse nondetermistic rewriting to achieve the proplog search 
+(rewrite (resolve (Cons g gs)) (resolve (append body gs))
+    :when ((head-body g body))
+) ; (!= (resolve (Cons g gs)) True) can be used to perhaps prune unneeded rewriting
+
+
+; If we want clauses with patterns, we can't use head-body unless we reify pattern matching
+(rewrite (resolve (Cons (GAdd TZero x x) gs)) (resolve gs)) ; (!= (resolve (Cons g gs)) True) can be used to perhaps prune unneeded rewriting
+(rewrite (resolve (Cons (GAdd (TSucc x) y (TSucc z)) gs)) (resolve (Cons (GAdd x y z) gs)))
+
+
+(rewrite (resolve (Cons (GLTE TZero x) gs)) (resolve gs)) ; (!= (resolve (Cons g gs)) True) can be used to perhaps prune unneeded rewriting
+(rewrite (resolve (Cons (GLTE (TSucc x) (TSucc y)) gs)) (resolve (Cons (GLTE x y) gs)))
+
+
+; We can't support prolog with ungrounded unification vars in the body (?).
+; What would y be?
+; (rewrite (resolve (Cons (GPath x z) gs)) (resolve (Cons (GEdge x y) (Cons (GPath y z) gs)))
+
+; Could use metalevel edge. That's kind of neato.
+; (rewrite (resolve (Cons (GPath x z) gs))  (resolve (Cons (GPath y z) gs))
+; :when ((edge x y)))
+
+; One can also generate ground queries as a search
+; (rule ((nat x) (nat y)) (define (resolve (GAdd x y TZero)))
+ 
+ ; Can we skolemize y? (Skolem 1 gs) (Skolem 2 gs) etc. 
+ ; Or carry a fresh counter.
+ ; (QueryVar String)
+ ; But then what if we unify skolem in different branches.
+ ; We need a substitution operation.
+ ; We manually need to pattern match on (Skolem), manually unify 
+ ;  
+ ; The problem is I can't use egglog nondetermisn for prolog and egglog UF for prolog's uf at the same time.
+ ; If I explicitly model choice poibts, I could probably use egglog's union find
+ ; unification will still need t be explicit rules
+
+(define one (TSucc TZero))
+(define two (TSucc one))
+(define three (TSucc two))
+(define q1 (resolve (Cons (GAdd two one three) Nil)))
+(define q2 (resolve (Cons (GAdd two one two) Nil)))
+
+(define q3 (resolve (Cons (GLTE one three) Nil)))
+(define q4 (resolve (Cons (GLTE two one) Nil)))
+(run 10)
+(check (= q1 True))
+(check (!= q2 True))
+(check (= q3 True))
+(check (!= q4 True))
+;(head-body GZero x x)
+
