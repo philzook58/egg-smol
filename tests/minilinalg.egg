@@ -1,0 +1,33 @@
+(datatype Expr
+  (Add Expr Expr)
+  (Mul Expr Expr)
+  (Num Rational)
+  (Var String)
+)
+
+(rewrite (Add x y) (Add y x))
+(rewrite (Add (Add x y) z) (Add x (Add y z)))
+
+(rewrite (Mul x y) (Mul y x))
+(rewrite (Mul (Mul x y) z) (Mul x (Mul y z)))
+(rewrite (Mul (Add x y) z) (Add (Mul x z) (Mul y z)))
+(rewrite (Add (Mul x z) (Mul y z)) (Mul (Add x y) z))
+
+(rewrite (Add (Num x) (Num y)) (Num (+ x y)))
+(rewrite (Mul (Num x) (Num y)) (Num (* x y)))
+
+(rule ((= (Add x y) z))
+      ((set (Add z (Mul (Num (rational -1 1)) y)) x)))
+
+(rule ((= (Mul (Num c) x) z) (!= c (rational 0 1)))
+      ((set (Mul (Num (/ (rational 1 1) c)) z) x)))
+
+(define x (Var "x"))
+(define y (Var "y"))
+(define z (Var "z"))
+
+(set (Add x (Num (rational 3 1))) (Num (rational 7 1)))
+(set (Mul (Num (rational 2 1)) z) y)
+
+(run 4)
+(check (= (Mul (Num (rational 2 1)) z) y))

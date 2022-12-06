@@ -1,0 +1,170 @@
+; https://arxiv.org/pdf/2204.02217.pdf
+;(datatype CliffordT 
+;    (I)
+;    (W) (H0)
+;    (H1) (S0) (S1) (T0) (T1) (CZ)
+;    )
+
+(datatype CliffordT 
+    (I)
+    (W) (H i64) (S i64) (T i64) (CZ i64) ; CZ is gonna need some extra rules somewhere   
+    )
+
+; helpers
+(function mul3 (CliffordT CLiffordT CliffordT) CliffordT)
+(rewrite (mul3 x y z) (mul x (mul y z)))
+
+(function mul4 (CliffordT CLiffordT CliffordT CLiffordT) CliffordT)
+(rewrite (mul3 x y z w) (mul x (mul3 y z w)))
+
+(function (pow CliffordT i64) CliffordT)
+(rewrite (mul x (pow x n))) (pow x (+ n 1))
+(rewrite (pow x 0) I)
+
+(rewrite (inv x) (pow x -1))
+(rewrite (pow x -1) (inv x))
+(rewrite (pow x 1) x)
+(rewrite x (pow x 1))
+;(rewrite (mul (inv x) (pow x n)) (pow x (- n 1)))
+(rewrite (mul (pow x n) (pow x m)) (pow x (+ n m)))
+
+; Does this stuff help you think?
+
+(function mul (CliffordT CliffordT) CliffordT)
+(function inv (CliffordT) CliffordT)
+(union (inv I) I)
+;identity
+(rewrite (mul I a) a)
+(rewrite (mul a I) a)
+;associativity
+(rewrite (mul a (mul b c)) (mul a (mul b c)))
+(rewrite (mul a (mul b c)) (mul a (mul b c)))
+
+; involutive
+(rewrite (inv (inv x)) x)
+(rewrite (dag (dag x)) x)
+
+; monoid relations C1
+(rewrite (mul W a) (mul a W))
+(rewrite (mul a W) (mul a W))
+
+; H S T are single particle operators
+; so they commute on different particles
+; C2
+(rewrite (mul (H n) (H m)) (mul (H m) (H n))
+:when ((!= n m))
+)
+(rewrite (mul (T n) (T m)) (mul (T m) (T n))
+:when ((!= n m))
+)
+(rewrite (mul (S n) (S m)) (mul (S m) (S n))
+:when ((!= n m))
+)
+(rewrite (mul (H n) (S m)) (mul (S m) (H n))
+:when ((!= n m))
+)
+(rewrite (mul (S m) (H n)) (mul (H n) (S m))
+:when ((!= n m))
+)
+(rewrite (mul (H n) (S m)) (mul (S m) (H n))
+:when ((!= n m))
+)
+(rewrite (mul (S m) (H n)) (mul (H n) (S m))
+:when ((!= n m))
+)
+(rewrite (mul (H n) (T m)) (mul (T m) (H n))
+:when ((!= n m))
+)
+(rewrite (mul (T m) (H n)) (mul (H n) (T m))
+:when ((!= n m))
+)
+(rewrite (mul (S n) (T m)) (mul (T m) (S n))
+:when ((!= n m))
+)
+(rewrite (mul (T m) (S n)) (mul (T n) (S m))
+:when ((!= n m))
+)
+
+
+; C3
+(union (pow W 8) I)
+; C4
+(rewrite (pow (H n) 2) I)
+;C5
+(rewrite (pow (S n) 4) I)
+;C6
+(rewrite (pow (mul (S n) (H n)) 3) W)
+;C7
+(rewrite (pow (CZ n) 2) I)
+
+; C8 (todo: both ways)
+(rewrite (mul (S n) (CZ n)) (mul (CZ n) (S n)))
+; C9
+(rewrite (mul (S (+ n 1)) (CZ n)) (mul (CZ n) (S (+ n 1))))
+
+;c10
+(rewrite (mul (mul4 (S n) (H n) (H n) (S n)) (CZ n))
+  (mul3 (CZ n)
+        (mul4 (S n) (H n) (H n) (S n))
+        (mul (S (+ n 1)) (S (+ n 1))) 
+  )
+)
+
+
+;c11
+(rewrite (mul (mul4 (S n) (H n) (H n) (S n)) (CZ (- n 1)))
+  (mul3 (CZ (- n 1))
+        (mul4 (S n) (H n) (H n) (S n))
+        (mul (S (- n 1)) (S (- n 1))) 
+  )
+)
+
+;c12
+(rewrite (mul3 (CZ n) (H n) (CZ n))
+    (mul4 
+        (mul (S n) (H n))
+        (CZ n)
+        (mul3 (S n) (H n) (S n))
+        (mul (S (+ n 1)) (inv W))
+    )
+)
+; c13 is same thing flipped
+
+
+;C14
+
+(rewrite (mul (T i) (T i)) (S i))
+;c15
+(rewrite (mul5 (T i) (H i) (S i) (S i) (H i)) W)
+;c16
+(rewrite (mul (T n) (CZ n)) (mul (CZ n) (T n)))
+; C17
+(rewrite
+ (mul4 (H (+ n 1))
+        (CZ n)
+        (mul (H (+ n 1)) (H n))
+        (CZ n)
+        (mul (H n) (T n))
+ )
+  (mul4 
+        (mul (T n) (H n))
+        (CZ n)
+        (mul (H (+ n 1)) (H n))
+        (CZ n)
+        (H n)
+ ))
+
+;c18
+; oof
+
+
+; Live on different strands
+
+; order of group elements
+; (omega ^ 8) = I
+;(rewrite (* H1 H1) I)
+;(union (* H0 H0) I)
+;(union (* S1 S1 S1 S1) I)
+;(union (* S1 H1))
+
+;(birewrite (* S1 CZ) (* S1 CZ))

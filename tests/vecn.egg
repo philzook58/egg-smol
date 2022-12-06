@@ -1,0 +1,162 @@
+(datatype Math (Lit i64))
+
+(datatype Type
+    (TArr Type Type)
+    (Unit)
+    (Vec Math Type)
+)
+
+(datatype Term
+    (Lam String Term)
+    (App Term Term)
+    (Var String)
+    (TT)
+    (Annot Term Type)
+    (VCons Term Term)
+    (VNil)
+)
+
+(sort Env (Map String Type))
+
+(function dom (Type) Type)
+(rewrite (dom (TArr a b)) a)
+
+(function codom (Type) Type)
+(rewrite (codom (TArr a b)) b)
+
+; A very interesting truth value. Compare and constrast with Bool. It is "half" a bool kind of
+(datatype True (I))
+
+; Reflecting when predicates. Convenient for rules that want to create demand for their guards.
+; Alternative names: => or |-
+(function when-type (True Type) Type)
+(rewrite (when-type (I) a) a)
+
+; Also possibly could call "and" or "conj". "meet"?
+(function when-true (True True) True)
+(union (when-true (I) (I)) (I))
+
+; Reflecting equality.
+(function eq-type (Type Type) True)
+(rewrite (eq-type a a) (I))
+
+(function synth (Env Term) Type)
+(function check0 (Env Term Type) True)
+
+; Each rewrite corresponds to a rule in table 1
+; https://arxiv.org/pdf/1908.05839.pdf
+
+; Var rule
+(rewrite (synth env (Var x)) (get env x))
+
+; Sub rule
+(rewrite (check0 env e ty) (when-true (eq-type (synth env e) ty) (I)))
+
+; Annot rule
+(rewrite (synth env (Annot e ty)) (when-type (check0 env e ty) ty))
+
+; Unit rule
+(rewrite (check0 env (TT) (Unit)) (I))
+
+; Lam rule
+(rewrite (check0 env (Lam x e) (TArr a b)) (check0 (insert env x a) e b))
+
+; App rule
+(rewrite (synth env (App f x)) 
+    (when-type 
+        (check0 env x (dom (synth env f)))
+        (codom (synth env f))
+    )
+)
+
+; Vector introduction rules
+(rewrite (check env (VNil) (Vec (Lit 0) a)) (I))
+(rewrite (check env (VCons x xs) (Vec n a)) (when-true (check env x a) (check env xs (Vec (Add n (Lit -1)) a))))
+
+; Elimination rules
+; (check env recvec (TArr (Vec n a)
+         ;       (TArr b 
+         ;       (TArr (TArr a (TArr Vec (- n 1) a) b))
+         ;       b
+         ;(I))
+; match vs recvec is whether we want an app or not.
+
+(define example1 (check0 (empty) (Lam "x" (Var "x")) (TArr (Unit) (Unit))))
+
+(run 10)
+
+(check (= example1 (I)))
+
+
+;; Hmm. Did I just encode datalog into a term rewriting system?
+;; 
+
+;; I don't have to pick just one synth check choice.
+
+;; Because bidirectional typing is a moded / purely functional discipline, it doesn't really need unification variables
+; In the sense thayt unificatiojn variables enable he same parameters to serve as input/ output
+; Since I am somewhat convinced that egglog doesn't really have unification variables, this is compelling to me
+;
+
+   ; (let (q (synth env f))
+   ; (when-type 
+   ;     (check env x (dom q))
+   ;     (codom q)
+   ; )
+    ;)
+
+
+
+; I'm not going to make check fail ie. a bool. It's too fishy.
+; / too much a of a pain. 
+;(check env (Cons x xs) (Vec n a)) (and (check env x a) (cgeck env xs (Vec ((Add n (Lit -1) a))))
+;(check env (Nil) (Vec (Lit 0) a)) (True))
+
+
+; maybe it would be better to grind down in prolog and just make n an egraph thing
+
+;(function type-of ((Map String Type) Term) Type)
+; (function temp ((Map String Type) Term)) ; hmm. Do maps even normalize though?
+;(function check ((Map String Type) Term Type) Bool)
+
+;(rewrite (type-of rho (TT)) (Unit))
+;(rewrite (type-of rho (Lam s b))   (-> a (type-of (insert rho s a) b)))
+;(rewrite (type-of rho (App f x))   )
+
+; Hmm. But a = b isn't
+;(rule (= (synth env e) ty) (= (check env e ty) (True)))
+;(rule (= synth env (Annot e ty1) ty2) (check env e)   )
+
+
+; var rule
+;(rewrite (synth env (Var x)) (lookup x env))
+; rule sub<= read forward. Shuld this be conditioned on check demand?
+;(rule ((= (synth env e) ty)) ((= (check env e ty) (True))))
+
+; demand for rule annot
+;(rule
+;    ((= ((synth env (Annot e ty1)) ty2)))
+;    (define (check env e ty1))
+;)
+; rule Annot read backwards and forwards
+; but block this rule with demand
+;(rewrite 
+;    (synth env (Annot e ty))
+;    ty
+;    :when ((= (check env e ty) (True)))
+;)
+;(rule (check env e ty)) (= (synth env (Annot e ty)) ty))
+
+;(rewrite
+;    (synth env (App f x))
+;    b
+;    :when 
+;    (
+;        (= (synth env f) (-> a b)
+;        (= (check env x a) (True)
+;    )
+
+;)
+
+;(rewrite (check env (TT) (Unit)) (True))
+

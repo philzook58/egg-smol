@@ -1,0 +1,141 @@
+; https://binsec.github.io/assets/publications/papers/2023-popl-full-with-appendices.pdf
+
+
+(datatype Expr
+    (Var Symbol)
+    ; (Binop ) ; (Lit)
+)
+
+(datatype Stmt
+    (Seq Stmt Stmt)
+    (Skip)
+    (Assign Symbol Expr)
+    (ITE Expr Stmt Stmt)
+  ;  (While Expr Stmt)
+)
+
+(datatype StmtCtx
+    (Top)
+    (LSeq StmtCtx Stmt)
+    (RSeq Stmt StmtCtx)
+    (Then Expr StmtCtx Stmt)
+    (Else Expr Stmt StmtCtx)
+  ;  (WhileCtx Expr StmtCtx)
+)
+
+(datatype ExprCtx
+    (Top)
+    (If StmtCtx Stmt Stmt)
+    (AssignCtx Symbol StmtCtx)
+  ;  (WhileCond StmtCtx Stmt)
+)
+
+(datatype State (State StmtCtx Stmt))
+(datatype SymExpr (SymVal ExprCtx Expr))
+(datatype SymDefVar (SymVal StmtCtx String))
+
+
+(function enter (State) State)
+(function exit (State) State)
+(rewrite (next1 (State ctx (Seq s1 s2)))  (State (SeqL ctx s2) s1))
+(rewrite (next1 (State ctx (Ite c t e)))  (State (Then c ctx e) t))
+(rewrite (next1 (State (LSeq ctx s2) (Assign x e)))  (State (RSeq (Assign x e) ctx) s2))
+(rewrite (next1 (State (RSeq s1 ctx) s2))  (exit (State ctx (Seq s1 s2))))
+
+; Do I even need all this garbage?
+
+; This is effectively reaching definitions?
+(function eval (Stmt StmtCtx (Map String (StmtCtx))) (Map String (StmtCtx)))
+(rewrite (eval (Seq s1 s2) ctx env) (eval s2 (eval s1 env)))
+(rewrite (eval (Ite c s1 s2) ctx env) (set-intersection (eval env t) ((eval env e)))
+  :when (= stmt (Ite c s1 s2))
+(rewrite (eval (Ite True s1 s2) ctx env) (eval env t))
+(rewrite (eval (Ite False s1 s2) ctx env) (eval env e))
+(rewrite (eval (It False s1 s2) ctx env) (eval env e))
+(rewrite (eval (Assign x e) ctx env) (set x l))
+(rewrite (eval ()))
+
+; anywhre that doesn't coincide receives a phi node.
+
+; phi is commutative, associative.
+(rewrite (phi x x) x)
+(rewrite (phi x y) (phi y x))
+
+; gatedphi
+; (ITE (gatedphi c x y))
+
+; It's implicitly the most recently written one
+; (datatype SymVar (SymVar Var StmtCtx Math))
+; where Math is the visitation number
+; ((Var n) + 1)
+; Timestamp could also be structured as loop1,loop2,loop3
+; Yea, we're really getting close to peg.
+
+(sort Var String)
+(function reach-def (StmtCtx Var) SymVar)
+
+; maybe transform the program into one that holds it's context at every point.
+(function addctx (Stmt) StmtCtx)
+(rewrite (addctx ctx (Seq s1 s2))  (SeqCtx ctx (addctx (SeqL ctx s2) (addctx SeqR s1 ctx) s1)))
+
+;(rewrite (eval (Assign ctx)))
+
+
+
+(function next2 (State) State)
+
+(rewrite (next2 (State ctx (Seq s1 s2)))  (State (SeqR s1 ctx) s2))
+(rewrite (next2 (State ctx (Ite c t e)))  (State (Else c t ctx) e))
+
+
+(function uses (Stmt) (Set String))
+(rewrite (uses (Seq s1 s2)) (set-union (uses s1) (uses s2)))
+(rewrite (uses (Assign x e)) (uses-expr e))
+(rewrite (uses (ITE c s1 s2)) (set-union (uses-expr c) (set-union (uses s1) (uses s2))))
+
+(function uses-expr (Expr) (Set String))
+(rewrite (uses-expr (Var x)) (set-singleton x))
+
+(function defines (Stmt) (Set String))
+(rewrite (defines (Seq s1 s2)) (set-union (defins s1) (defines s2)))
+(rewrite (defines (Assign x e)) (set-sing x))
+(rewrite (uses (ITE c s1 s2)) (set-union (defines s1) (defines s2)))
+
+; live at exit of context hole
+(function live (StmtCtx) (Set String))
+
+; hmm. function a -> set b  ~ rel a b
+; (relation live (StmtCtx String))
+; (rule ((live s v))  ((set (live-fun s v) (sing v))))
+; (rule (= s (live-fun stmt)) (elem v s))  ( live stmt v  ) )
+; (rule (elem v (live-fun stmt)))  ( live stmt v  ) )
+(rule ((live-rel l v)) ((set (live-fun l) (singleton v))))
+(rule ((= s (live-fun l)) (= v (elem s)))  ( live-rel l v  ))
+
+; (rule (elem v (live-fun stmt)))  ( live stmt v  ) )
+
+
+; The sets should be references to tries. But how?
+; A view.
+; a _partial_ function from a -> set b ~ rel a b
+
+; analog of in-block out-block
+
+; available at entry of context hole
+(function reaching (StmtCtx) (Set SymVar))
+(function reaching ())
+
+
+; available at exit of statement
+(function reaching-stmt ((Set SymVar) State) (Set SymVar))
+
+(rewrite (reaching-stmt (State ctx (ITE c t e))
+    (set-intersection (reaching-stmt (State (Then c e) t) )  (reaching-stmt (State (Else c t) e))))
+)
+
+(rewrite (reaching-stmt (State ctx (Seq s1 s2))) 
+    
+(reaching-stmt (reaching-stmt reach (State (SeqR ctx s2) s1)) (State (SeqL s1 ctx) s2)))
+
+
+(rewrite (reaching ))

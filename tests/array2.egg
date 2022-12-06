@@ -1,0 +1,23 @@
+(datatype Addr
+  (Num i64)
+  (Var String)
+)
+
+(datatype Array
+  (Const i64)
+  (AVar String)
+)
+
+(datatype Bool (True) (False))
+(function select (Array Addr) i64)
+(function store (Array Addr i64) Array)
+(function diseq (Addr Addr) Bool)
+
+
+(rule ((= (diseq a b) (True))) ((union a b)))
+; select gets from store
+(rewrite (select (store mem i e) i) e)
+; select passes through wrong index
+(rewrite ((select (store mem i1 e) i2) e1)
+      (select mem i2) :when (= (diseq i1 i2) (False)))
+

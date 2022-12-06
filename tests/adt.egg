@@ -1,0 +1,6 @@
+(datatype Bool
+	(True) 
+    (False)
+    )
+    
+(check (!= (True) (False)))

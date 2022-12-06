@@ -1,0 +1,174 @@
+; https://binsec.github.io/assets/publications/papers/2023-popl-full-with-appendices.pdf
+
+
+
+(datatype Expr
+    (Var String)
+    ; (Binop ) ; (Lit)
+)
+
+(datatype Stmt
+    (Seq Stmt Stmt)
+    (Skip)
+    (Assign String Expr)
+    (ITE Expr Stmt Stmt)
+  ;  (While Expr Stmt)
+)
+
+(datatype StmtCtx
+    (Top)
+    (SeqL StmtCtx Stmt)
+    (SeqR Stmt StmtCtx)
+    (Then Expr StmtCtx Stmt)
+    (Else Expr Stmt StmtCtx)
+  ;  (WhileCtx Expr StmtCtx)
+)
+
+(datatype Stmt1
+    (Seq1 StmtCtx Stmt1 Stmt1)
+    (Skip1 StmtCtx)
+    (Assign1 StmtCtx String Expr)
+    (ITE1 StmtCtx Expr Stmt1 Stmt1)
+  ;  (While Expr Stmt)
+)
+
+(function addctx (StmtCtx Stmt) Stmt1)
+(rewrite (addctx ctx (Seq s1 s2)) (Seq1 ctx (addctx (SeqL ctx s2) s1) (addctx (SeqR s1 ctx) s2)))
+(rewrite (addctx ctx (Assign x e)) (Assign1 ctx x e))
+(rewrite (addctx ctx (Skip)) (Skip1 ctx))
+(rewrite (addctx ctx (ITE c t e)) (ITE1 ctx c (addctx (Then c ctx e) t) (addctx (Else c t ctx) e)))
+
+;live expressions Uses as dual to Defs
+; 
+
+(relation live-in (Stmt1 String))
+(relation live-out (Stmt1 String))
+; live-in Stmt1 (Set String) but we don't need this aggregate.
+
+(rule ((live-out (Skip1 ctx))) (live-in (Skip1 ctx)))
+(rule ((live-out stmt y) 
+       (= stmt (Assign1 ctx x e)) 
+       (!= x y)) 
+     ((live-in y)))
+(rule ((live-out stmt x) 
+       (= stmt (Assign1 ctx x e)) 
+       ((fv e x)) 
+     ((live-in x))))
+
+(rule ((live-out stmt x) 
+       (= stmt (ITE1 ctx c t e)))
+       ((live-out t x) (live-out e x)))
+(rule ((live-in t x) 
+       (= stmt (ITE1 ctx c t e)))
+       ((live-in stmt x)))
+(rule ((live-in e x) 
+       (= stmt (ITE1 ctx c t e)))
+       ((live-in stmt x)))
+
+
+(rule ((live-out (Seq1 ctx s1 s2))) ((live-out s2)))
+(rule ((live-in s2 x)
+        (= stmt (Seq1 ctx s1 s2))) ((live-out s1 x)))
+(rule ((live-in s1 x)
+        (= stmt (Seq1 ctx s1 s2))) ((live-in stmt x)))
+
+
+
+
+(datatype Def (Def Stmt1) ; hmm. Maybe this should also have Stmt1 in there. 
+    (GatePhi c Def Def)) ; gated phi is a purely function if expr.
+; reaching is perfoming the 
+; Cuold also call reaching eval or symeval
+(function reaching ((Map String Def) Stmt1) (Map String Def))
+(rewrite (reaching env (Seq1 ctx s1 s2)) (reaching (reaching env s1) s2))
+(rewrite (reaching env (Assign1 ctx x e)) (set env x (Def (Assign1 ctx x e))))
+(rewrite (reaching env (ITE1 ctx c t e)) 
+    (GatePhi c (reaching env t) (reaching env e)))
+(rewrite (reaching env (Skip1 ctx)) env)
+
+; purely functional ite equalities
+(rewrite (GatedPhi c x x) x)
+(rewrite (GatedPhi True t e) t)
+(rewrite (GatedPhi False t e) e)
+
+(function reaching (Stmt1 String Def) (Map String Def))
+(relation reaching (Stmt1 String Def))
+(relation reach-in (Stmt1 String Def))
+(function reach-in (Stmt1 String) Def)
+(function reach-out (Stmt1 String) Def)
+
+; We don't need extensional maps. So we can do the tricks of naming maps by what we be in them.
+
+; What the hell was this transformation?
+; The statement itself names the map
+; There is only one map that will be called on each statmemt in reaching.
+; Hmm.
+(rule ((reaching x d (Seq1 ctx s1 s2))  (reaching x d s1)))
+
+
+(rewrite (reach-in stmt x) (reach-in s1 x)
+    :when (= stmt (Seq1 ctx s1 s2 ))
+)
+(rewrite (reach-out s1 x) (reach-in s2 x)
+    :when (= stmt (Seq1 ctx s1 s2 ))
+)
+(rewrite (reach-out s2 x) (reach-out stmt x)
+    :when (= stmt (Seq1 ctx s1 s2 ))
+)
+
+(rule (reach-in (Assign1 ctx x e) y) (reach-out (Assign1 ctx x e) y)
+    :when (!= x y)
+) 
+
+(rewrite (reach-in (Assign1 ctx x e) y) (reach-out (Assign1 ctx x e) y)
+    :when (!= x y)
+) 
+
+;(rewrite (reach-in (Assign1 ctx x e) x) (reach-out (Assign1 ctx x e) (Def (Assign1 ctx x e))))
+(rule ((= stmt (Assign1 ctx x e))) (reach-out stmt x (Def stmt)))
+
+(rewrite (reach-in (ITE1 ctx c t e) x)
+   (reach-in t x)
+) 
+(rewrite (reach-in (ITE1 ctx c t e) x)
+   (reach-in e x)
+) 
+(rule 
+   ((= stmt (ITE1 ctx c t e))
+   (tx (reach-out t x))
+   (ex (reach-out t x)))
+
+   ((set (reach-out stmt x) (GatedPhi c tx ex)))
+) 
+
+; I only really need individual variables. That is what made this possible.
+
+
+(rule (= stmt (Seq1 ctx s1 s2) (reach-out x s2)) ((reaching )) )
+
+(relation reach-out (Stmt1 String Def))
+
+(rule ((reaching x d (Seq1 ctx s1 s2))  (reaching x d s1))
+(rule (= stmt (Seq1 ctx s1 s2) (reaching x d s1)) ((reaching )) )
+(rewrite (reaching env (Seq1 ctx s1 s2)) (reaching (reaching env s1) s2))
+(rewrite (reaching env (Assign1 ctx x e)) (set env x (Def (Assign1 ctx x e))))
+(rewrite (reaching env (ITE1 ctx c t e)) 
+    (GatePhi c (reaching env t) (reaching env e)))
+(rewrite (reaching env (Skip1 ctx)) env)
+
+
+
+; now convert reach-in reach-out to purely functional
+(datatype Pure
+    (ITE3 Pure Pure Pure)
+    (Let Var Pure Pure)
+)
+(datatype LetVar (LetVar Pure)) ; don't have to 
+
+; reach-out of prog is basically the purely functional expression already?
+; but I need to convert
+
+(function pure (Stmt1) Pure)
+(function pure-expr (Stmt1 Expr) Pure) ; need to lookup vars in Stmt1 reach-in
+
+(rewrite (pure ))

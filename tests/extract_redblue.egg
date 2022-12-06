@@ -1,0 +1,45 @@
+(datatype RedBlue
+  (Blue)
+  (Red)
+  (Node RedBlue RedBlue))
+
+(define start (Node (Red) (Node (Red) (Red))))
+
+(set (Blue) (Red))
+
+(function nblue (RedBlue) i64 :merge (min old new))
+
+(set (nblue (Blue)) 0)
+(set (nblue (Red)) 1)
+(rule ((= z (Node x y)) (= nx (nblue x)) (= ny (nblue y)))  
+    ((set (nblue z) (+ nx ny))))
+
+(run 6)
+
+(clear-rules)
+
+(datatype ERedBlue
+  (ERed) 
+  (EBlue)
+  (ENode ERedBlue ERedBlue))
+
+; The idea here is to copy over exactly the terms that satruate the depth bound
+; These can then be printed using the ordinary extraction facilities
+
+(function leastblue (RedBlue) ERedBlue)
+
+(rule ((= (nblue (Red)) 1))
+      ((set (leastblue (Red)) (ERed))))
+(rule ((= (nblue (Blue)) 0))
+      ((set (leastblue (Blue)) (EBlue))))
+;(set (leastblue (Blue)) (EBlue)) ; but red is equal to blue. I'm setting ERed = EBlue.
+;(set (leastblue (Red)) (ERed))
+(rule ((= t (Node x y)) 
+       (= (leastblue x) ex) (= (leastblue y) ey)
+       (= (nblue t) (+ (nblue x) (nblue y))))
+      ((set (leastblue t) (ENode ex ey))))
+
+(run 8)
+(extract (leastblue start))
+(extract :variants 2 start)
+

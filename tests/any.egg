@@ -1,0 +1,18 @@
+(datatype Any
+    (Ai64 i64)
+    (AString String)
+)
+; Maybe call it Value ;)
+
+; need primitive guards
+;(rewrite (nth n (Cons )) )
+
+
+; assoc lists
+
+
+; records / tuples
+; Either
+; Maybe
+
+; trie based on facts

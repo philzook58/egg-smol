@@ -1,0 +1,34 @@
+(datatype Var (Var String))
+(datatype Blk (Blk String))
+
+(datatype Expr
+    (Add Expr Expr)
+    (AVar Var)
+)
+
+
+(relation gen (Blk Expr))
+;(relation free Var Expr)
+(relation kill (Blk Expr))
+(relation next (Blk Blk))
+(relation notavail_entry (Blk Expr))
+(relation notavail_exit (Blk Expr))
+
+(define l1 (Blk "l1"))
+(define l2 (Blk "l2"))
+
+(define a (Var "a"))
+(define b (Var "b"))
+
+
+;(rule (= (Var s) v)
+;    (free v (AVar a)))
+
+(sort VarSet (Map i64 String))
+(function free (Expr) VarSet)
+(rewrite (free (AVar v)) (insert v (empty)))
+(rewrite (free (Add x y)) (union (free x) (free y)))
+
+
+(gen l1 (Add a b))
+(gen l2 (Add b a))

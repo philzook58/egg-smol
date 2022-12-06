@@ -1,0 +1,4 @@
+; The rapier is a technique for dealing with capture avoiding susbtitution
+; in a named representation that avoids unnecessary freshening
+
+; As of yet, Named representations seem to work best in egglog.

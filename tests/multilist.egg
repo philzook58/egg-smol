@@ -1,0 +1,9 @@
+(datatype List (Cons i64 List) (Nil))
+
+(function list (i64) List)
+(function list (i64 i64) List)
+(function list (i64 i64 i64) List)
+
+(rewrite (list x0) (Cons x0 Nil))
+(rewrite (list x1 x2) (Cons x1 (list x2)))
+(rewrite (list x0 x1 x2) (Cons x0 (list x1 x2)))

@@ -1,0 +1,17 @@
+; Nominal unification is "easy" and probably one of the variants of unification encodable in egglog
+; permutation.
+
+
+
+; Unification by demand
+
+(datatype Proof (True))
+(function unify (Expr Expr) Proof)
+
+
+
+
+; Unification Hints
+
+
+; unification modulo ground equalities

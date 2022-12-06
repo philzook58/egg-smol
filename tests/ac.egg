@@ -1,0 +1,31 @@
+(datatype Math
+    (add Math Math)
+    (num i64)
+)
+
+
+(define lhs (add (num 10)
+  (add (num 9)
+     (add (num 8)
+        (add (num 7)
+           (add (num 6)
+              (add (num 5)
+                 (add (num 4)
+                    (add (num 3) (add (num 2) (add (num 1) (num 0))))))))))))
+
+(define rhs (add
+  (add
+     (add
+        (add
+           (add
+              (add
+                 (add (add (add (add (num 0) (num 1)) (num 2)) (num 3))
+                    (num 4)) (num 5)) (num 6)) (num 7)) 
+        (num 8)) (num 9)) (num 10)))
+
+(rewrite (add x (add y z)) (add (add x y) z))
+(rewrite (add (add x y) z) (add x (add y z)))
+(rewrite (add x y) (add y x))
+
+(run 1)
+(check (= lhs rhs))

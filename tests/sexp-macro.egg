@@ -1,0 +1,32 @@
+; Egglog is powerful enough that it's macro system could be written in itself
+; And it's type system.
+
+
+(dataype SList (Scons Sexp Slist) (Nil))
+(datatype Sexp 
+    (SList Slist)
+    (Atom Symbol)
+    (Number i64)
+    (Unit Unit)
+
+)
+
+; this is the expr datatype
+(datatype Expr
+  (Literal Literal)
+  (Var Symbol)
+  (Call Symbol (Vec Expr))
+)
+
+
+(relation rules Syntax)
+(relation syntax Syntax)
+
+(rewrite `(foo ,x ,y ,z) `(rule  ,() ,() ,() ))
+; does macro need a special word?
+
+; (macro foo (Syntax Syntax) Syntax)
+;
+;
+(macro-run 20)
+(macro-expand)
