@@ -1,0 +1,113 @@
+; A "first class" / local / scope union find is encodable in egglog.
+; This is perhaps not surprising, since there are also encodings to 
+; souffle subsumption
+; It's fairly natural to write though
+
+;Similar to how a union find is encodable into Souffle using subsumption, union finds are encodable into egglog using a merge function.
+;This is particularly interesting as I think it gives a notion of a "scoped", "keyed", or "first class" union find, if we expose the ability to compare eids. This is a very natural way of "reifying" equality in the context of egglog rather than reifying to an eq relation. It may be important to have the notion of the first class UFs notion of tie breaking match the internal egglog tie breaker (if possible).
+;It may also be possible to encode generalized union finds whose edges are labelled by group elements.
+;It is interesting to note that the keyed union find is kind of separating off a segment of the global union find for it's own use.
+
+
+(function root (i64) i64 :merge (min old new))
+
+; To make this more first class
+; One can give union finds some kind of posibly structured "name" 
+; in the standard first orderi representation of named first class functions
+; (function apply_uf (Name i64) i64)
+
+; root being undefined is it being the same eclass as itself
+
+; reflexivity
+
+; should this work?
+;(rule ((< x (root x))) ((set (root x) x)))
+(rule ((= y (root x)) (< x y)) ((set (root x) x)))
+
+; transitivity
+(rule ((= (root x) y) (= (root y) z)) 
+    ((set (root x) z))
+)
+
+(set (root 0) 1)
+(set (root 1) 2)
+(set (root 4) 7)
+(set (root 7) 0)
+(set (root 7) 7)
+
+(run 10)
+(print root)
+(check (= (root 0) (root 4)))
+
+
+(datatype EClass)
+
+; way more direct encoding
+
+(function root2 (i64) EClass)
+
+(set (root2 0) (root2 1))
+(set (root2 1) (root2 2))
+(set (root2 4) (root2 7))
+(set (root2 7) (root2 0))
+(set (root2 7) (root2 7))
+(run 10)
+(print root2)
+(check (= (root2 0) (root2 4)))
+
+
+; A keyed union find built out of union operations.
+
+(datatype UF (Union i64 i64 UF) (Empty))
+(function root3 (UF i64) EClass)
+
+; These are nice compression laws / extensionality, but not necessary
+; They are definitely not complete extensionality
+; (rewrtie (union i j (union k l uf))) (union k l (union i j uf))))
+(rewrite (Union i i uf) uf)
+(rewrite (Union i j uf) (Union j i uf))
+(rewrite (Union i j uf) uf
+    :when ((= (root3 uf i) (root3 uf j))))
+
+;(rewrite (root3 (Union i j uf) a) (root3 (Union i j uf) b)
+; :when ((= (root3 uf a) (root uf b)))
+;)
+
+; Maybe this is smarter. Does this copy cleanly?
+; Well it makes demand which is nice.
+; And it avoid the large number of bound variables of the other trasnference rules.
+
+(rewrite (root3 (Union i j uf) i) (root3 (Union i j uf) j))
+(function root3-trans (UF EClass) EClass)
+(rewrite (root3 (Union i j uf) a) (root3-trans (Union i j uf) (root3 uf a)))
+
+(define uf1 (Union 2 3 (Union 1 2 Empty)))
+(define r1 (root3 uf1 1))
+(define r3 (root3 uf1 3))
+(define r4 (root3 uf1 4))
+(run 10)
+(check (= r1 r3))
+(check (!= r1 r4))
+(print root3)
+(print Union)
+
+
+
+; It also plays nice with eclasses
+;(datatype EClass (Name String))
+; Need to define min. For this purpose, min over eids is probably ok?
+;(function root2 (EClass) EClass :merge (min old new))
+
+;(rule ((= y (root2 x))) ((set (root2 x) x)))
+
+; transitivity
+;(rule ((= (root2 x) y) (= (root2 y) z)) 
+;    ((set (root2 x) z))
+;)
+
+
+; To use a particular first class union find in a rule under context C
+; 
+; one needs to now explicitly join with respect to (apply_uf C _) 
+; over the eq relation. This is _not_ an N^2 join though. Maybe it is...
+

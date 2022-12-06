@@ -1,0 +1,47 @@
+(datatype Expr
+  (Add Expr Expr)
+  (Mul Expr Expr)
+  (Num Rational)
+  (Var String)
+)
+
+
+(rewrite (Add x y) (Add y x))
+(rewrite (Add (Add x y) z) (Add x (Add y z)))
+
+(rewrite (Mul x y) (Mul y x))
+(rewrite (Mul (Mul x y) z) (Mul x (Mul y z)))
+(rewrite (Mul (Add x y) z) (Add (Mul x z) (Mul y z)))
+(rewrite (Add (Mul x z) (Mul y z)) (Mul (Add x y) z))
+
+(rewrite (Add (Num x) (Num y)) (Num (+ x y)))
+(rewrite (Mul (Num x) (Num y)) (Num (* x y)))
+
+(rule ((= (Add x y) z))
+      ((set (Add z (Mul (Num (rational -1 1)) y)) x)))
+
+(rule ((= (Mul (Num c) x) z) (!= c (rational 0 1)))
+      ((set (Mul (Num (/ (rational 1 1) c)) z) x)))
+
+(define x (Var "x"))
+(define y (Var "y"))
+(define z (Var "z"))
+
+;system 1: x + 2 = 7
+(set (Add x (Num (rational 2 1))) (Num (rational 7 1)))
+;system 2: z + y = 7, 2z = y
+;(set (Add (Mul (Num (rational 1 1)) z) y) (Num (rational 7 1)))
+(set (Mul (Num (rational 2 1)) z) y)
+
+(define foo (Num (/ (rational 1 1) (rational 2 2))))
+(run 4)
+;(extract x)
+(check (= x (Num (rational 5 1))))
+;(extract z)
+;(extract foo)
+(check (!= (rational 1 2) (rational 2 1)))
+(check (= (rational 1 2) (rational 2 4)))
+(check (= (Mul (Num (rational 1 2)) y) z))
+(check (= (Mul (Num (rational 2 1)) z) y))
+;(check (= z (Num (rational 7 3))))
+;(query ((= (Num c) (Var "y"))))
