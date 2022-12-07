@@ -1,15 +1,98 @@
-; https://github.com/mgree/katbury
+; Adapted from https://github.com/mgree/katbury
 (datatype Bool 
         (False)
         (True)
-        (~ KAT)
-        (| KAT KAT)
-        (& KAT KAT)
+        (not Bool)
+        (or Bool Bool)
+        (and Bool Bool)
+        (bvar String)
 )
 
 (datatype KAT
     (test Bool)
     (par KAT KAT)
     (seq KAT KAT)
-    (* KAT)
+    (star KAT)
+    (kvar String)
 )
+
+
+(birewrite (seq p (seq q r)) (seq (seq p q) r)) ; assoc
+(birewrite (seq p (par q r)) (par (seq p q) (seq p r))) ; distr
+(birewrite (seq (par p q) r) (par (seq p r) (seq q r))) ; 
+(birewrite (par (test True) (seq p (star p))) (star p))
+(birewrite (par (test True) (seq (star p) p)) (star p))
+
+; boolean algebra (copy of ka laws, not bothering with * laws)
+(birewrite (and a (and b c)) (and (and a b) c))
+(birewrite (and a (or b c)) (and (or a b) (or a c)))
+(birewrite (and (or a b) c) (and (or a c) (or b c)))
+
+; boolean algebra (ba laws)
+(birewrite (or a (and b c)) (and (or a b) (or a c)))
+
+; test congruence
+(birewrite (test (or a b)) (par (test a) (test b)))
+(birewrite (test (and a b)) (seq (test a) (test b)))
+
+(rewrite (par p (par q r)) (par (par p q) r))
+(rewrite (par p q) (par q p))
+(rewrite (par p (test False)) p)
+(rewrite (par p p) p)
+(rewrite (seq (test True) p) p)
+(rewrite (seq p (test True)) p)
+(rewrite (seq (test False) p) (test False))
+(rewrite (seq p (test False)) (test False))
+
+; KA-LFP-L     q + pr <= r implies p*q <= r
+(rule ((= r (par (par q (seq p r)) r))) ((set (par (seq (star p) q) r) r)))
+;  KA-LFP-R     p + qr <= q implies pr* <= q
+(rule ((= q (par (par p (seq q r)) q))) ((set (par (seq p (star r)) q) q)))
+; boolean algebra (copies of ka laws)
+(birewrite (or a (or b c)) (or (or a b) c))
+(rewrite (or a b) (or b a))
+(rewrite (or a False) a)
+(rewrite (or a a) a)
+(rewrite (and True a) a)
+(rewrite (and a True) a)
+(rewrite (and False a) False)
+(rewrite (and a False) False)
+
+; boolean algebra (ba laws)
+(rewrite (or a True) True)
+(rewrite (or a (not a)) True)
+(rewrite (and a b) (and b a))
+(rewrite (and a (not a)) False)
+(rewrite (and a a) a)
+
+; Hmm. He was missing this one? It's redundant?
+(rewrite (not (not a)) a)
+
+; KAT proof requires invention
+(set (not False) True)
+(set (not True) False)
+
+;transitivity
+; Wait. This is totally redundant
+; (rule ((= r (par q r)) (= q (par q r))) ((union r q)))
+
+; tests
+
+
+
+(define t1 (test (not False)))
+(run 10)
+(check (= t1 (test True)))
+
+(define t2 (test (not True)))
+(run 10)
+(check (= t2 (test False)))
+(check (!= t2 t1))
+
+
+(define p (kvar "p"))
+(define t3 (par (test True) (star p)))
+(run 3)
+(check (= t3 (star p)))
+
+(clear)
