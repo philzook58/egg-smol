@@ -32,13 +32,13 @@ Comma<T>: Vec<T> = {
 };
 
 Command: Command = {
-    "(" "datatype" <name:Ident> <variants:(Variant)*> ")" => Command::Datatype { <> },
-    "(" "sort" <name:Ident> "(" <head:Ident> <tail:(Expr)*> ")" ")" => Command::Sort (<>),
-    "(" "function" <name:Ident> <schema:Schema> <cost:Cost>
+    "(" "datatype" <name:Name> <variants:(Variant)*> ")" => Command::Datatype { <> },
+    "(" "sort" <name:Name> "(" <head:Name> <tail:(Expr)*> ")" ")" => Command::Sort (<>),
+    "(" "function" <name:Name> <schema:Schema> <cost:Cost>
         <merge:(":merge" <Expr>)?> <default:(":default" <Expr>)?> ")" => {
         Command::Function(FunctionDecl { name, schema, merge, default, cost })
     },
-    "(" "relation" <name:Ident> <types:List<Type>> ")" => Command::Function(FunctionDecl::relation(name, types)),
+    "(" "relation" <name:Name> <types:List<Type>> ")" => Command::Function(FunctionDecl::relation(name, types)),
     "(" "rule" <body:List<Fact>> <head:List<Action>> ")" => Command::Rule(Rule { head, body }),
     "(" "rewrite" <lhs:Expr> <rhs:Expr>
         <conditions:(":when" <List<Fact>>)?>
@@ -46,7 +46,7 @@ Command: Command = {
     "(" "birewrite" <lhs:Expr> <rhs:Expr>
         <conditions:(":when" <List<Fact>>)?>
     ")" => Command::BiRewrite(Rewrite { lhs, rhs, conditions: conditions.unwrap_or_default() }),
-    "(" "define" <name:Ident> <expr:Expr> <cost:Cost> ")" => Command::Define { name, expr, cost },
+    "(" "define" <name:Name> <expr:Expr> <cost:Cost> ")" => Command::Define { name, expr, cost },
     <NonLetAction> => Command::Action(<>),
     "(" "run" <limit:UNum>  <until:(":until" <Fact>)?> ")" => Command::Run(RunConfig { limit, until }),
     "(" "calc" "(" <idents:IdentSort*> ")" <exprs:Expr+> ")" => Command::Calc(idents, exprs),
@@ -59,7 +59,7 @@ Command: Command = {
     "(" "pop" <UNum?> ")" => Command::Pop(<>.unwrap_or(1)),
     "(" "print" <sym:Ident> <n:UNum?> ")" => Command::Print(sym, n.unwrap_or(10)),
     "(" "print-size" <sym:Ident> ")" => Command::PrintSize(sym),
-    "(" "input" <name:Ident> <file:String> ")" => Command::Input { name, file },
+    "(" "input" <name:Name> <file:String> ")" => Command::Input { name, file },
 }
 
 Cost: Option<usize> = {
@@ -76,11 +76,9 @@ NonLetAction: Action = {
 }
 
 Action: Action = {
-    "(" "let" <name:Ident> <expr:Expr> ")" => Action::Let(name, expr),
+    "(" "let" <name:Name> <expr:Expr> ")" => Action::Let(name, expr),
     <NonLetAction> => <>,
 }
-
-Name: Symbol = { "[" <Ident> "]" => <> }
 
 Fact: Fact = {
     "(" "=" <mut es:Expr+> <e:Expr> ")" => {
@@ -96,7 +94,7 @@ Schema: Schema = {
 
 Expr: Expr = {
     <Literal> => Expr::Lit(<>),
-    <Ident> => Expr::Var(<>),
+    <Name> => Expr::Var(<>),
     <CallExpr> => <>,
 };
 
@@ -113,12 +111,12 @@ CallExpr: Expr = {
 ExprList: Vec<Expr> = { "(" <sexps:(Expr)*> ")" => sexps }
 
 Variant: Variant = {
-    "(" <name:Ident> <types:(Type)*> <cost:Cost> ")" => Variant { <> },
+    "(" <name:Name> <types:(Type)*> <cost:Cost> ")" => Variant { <> },
 }
 
 Type: Symbol = <Ident>;
 
-IdentSort: IdentSort = "(" <ident:Ident> <sort:Type> ")" => IdentSort { ident, sort };
+IdentSort: IdentSort = "(" <ident:Name> <sort:Type> ")" => IdentSort { ident, sort };
 Num: i64 = <s:r"(-)?[0-9]+"> => s.parse().unwrap();
 UNum: usize = {
     <Num> => <>.try_into().unwrap(),
@@ -127,6 +125,8 @@ Bool: bool = {
     "true" => true,
     "false" => false,
 }
-Ident: Symbol = <s:r"([[:alpha:]][\w-]*)|([-+*/!=<>&|^/%]+)"> => s.parse().unwrap();
+Scope : Symbol = <Name> "::" => <>;
+Ident : Ident = <scope:Scope*> <name:Name> => Ident{name, scope};
+Name: Symbol = <s:r"([[:alpha:]][\w-]*)|([-+*/!=<>&|^/%]+)"> => s.parse().unwrap();
 SymString: Symbol = <r#""[^"]*""#> => Symbol::from(<>);
 String: String = <r#""[^"]*""#> => (<>).trim_matches('"').to_owned();

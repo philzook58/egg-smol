@@ -8,6 +8,29 @@ pub enum Literal {
     String(Symbol),
     Unit,
 }
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct Ident {
+    pub name: Symbol,
+    pub scope: Vec<Symbol>,
+}
+
+impl Display for Ident {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for name in &self.scope {
+            write!(f, "{}::", name)?;
+        }
+        write!(f, "{}", self.name)
+    }
+}
+
+impl From<Symbol> for Ident {
+    fn from(name: Symbol) -> Self {
+        Ident {
+            name,
+            scope: vec![],
+        }
+    }
+}
 
 macro_rules! impl_from {
     ($ctor:ident($t:ty)) => {
@@ -47,11 +70,11 @@ pub enum Expr {
     Lit(Literal),
     Var(Symbol),
     // TODO make this its own type
-    Call(Symbol, Vec<Self>),
+    Call(Ident, Vec<Self>),
 }
 
 impl Expr {
-    pub fn call(op: impl Into<Symbol>, children: impl IntoIterator<Item = Self>) -> Self {
+    pub fn call(op: impl Into<Ident>, children: impl IntoIterator<Item = Self>) -> Self {
         Self::Call(op.into(), children.into_iter().collect())
     }
 

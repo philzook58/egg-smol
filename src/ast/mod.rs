@@ -66,8 +66,8 @@ pub enum Command {
     Check(Fact),
     ClearRules,
     Clear,
-    Print(Symbol, usize),
-    PrintSize(Symbol),
+    Print(Ident, usize),
+    PrintSize(Ident),
     Input {
         name: Symbol,
         file: String,
@@ -76,6 +76,7 @@ pub enum Command {
     Push(usize),
     Pop(usize),
 }
+
 #[derive(Clone, Debug)]
 pub struct IdentSort {
     pub ident: Symbol,
@@ -150,8 +151,8 @@ impl Display for Fact {
 #[derive(Clone, Debug)]
 pub enum Action {
     Let(Symbol, Expr),
-    Set(Symbol, Vec<Expr>, Expr),
-    Delete(Symbol, Vec<Expr>),
+    Set(Ident, Vec<Expr>, Expr),
+    Delete(Ident, Vec<Expr>),
     Union(Expr, Expr),
     Panic(String),
     Expr(Expr),
