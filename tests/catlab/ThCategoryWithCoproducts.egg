@@ -1,0 +1,57 @@
+;ThCategoryWithCoproducts
+(datatype TYPE)
+(datatype TERM)
+(function type (TERM) TYPE)
+(function Ob () TYPE)
+(function Hom (TERM TERM) TYPE)
+(function Initial () TYPE)
+(function Coproduct (TERM TERM) TYPE)
+
+(function id (TERM) TERM)
+(rule ((= goofball (id A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (id A)) (Hom A A) :when ((= (type A) Ob)))
+
+(function compose (TERM TERM) TERM)
+(rule ((= goofball (compose f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (compose f g)) (Hom A C) :when ((= (type f) (Hom A B)) (= (type g) (Hom B C))))
+
+(function initial () TERM)
+(rule ((= goofball (initial )))  ((let goofball_demand (type goofball)) ))
+(rewrite (type (initial )) (Initial ) :when ())
+
+(function ob (TERM) TERM)
+(rule ((= goofball (ob ⊥)))  ((let goofball_demand (type goofball)) (let ⊥_type (type ⊥))))
+(rewrite (type (ob ⊥)) Ob :when ((= (type ⊥) (Initial ))))
+
+(function create (TERM TERM) TERM)
+(rule ((= goofball (create ⊥ C)))  ((let goofball_demand (type goofball)) (let ⊥_type (type ⊥)) (let C_type (type C))))
+(rewrite (type (create ⊥ C)) (Hom (ob ⊥) C) :when ((= (type ⊥) (Initial )) (= (type C) Ob)))
+
+(function coproduct (TERM TERM) TERM)
+(rule ((= goofball (coproduct A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (coproduct A B)) (Coproduct A B) :when ((= (type A) Ob) (= (type B) Ob)))
+
+(function ob (TERM) TERM)
+(rule ((= goofball (ob ⨆)))  ((let goofball_demand (type goofball)) (let ⨆_type (type ⨆))))
+(rewrite (type (ob ⨆)) Ob :when ((= (type ⨆) (Coproduct A B))))
+
+(function coproj1 (TERM) TERM)
+(rule ((= goofball (coproj1 ⨆)))  ((let goofball_demand (type goofball)) (let ⨆_type (type ⨆))))
+(rewrite (type (coproj1 ⨆)) (Hom A (ob ⨆)) :when ((= (type ⨆) (Coproduct A B))))
+
+(function coproj2 (TERM) TERM)
+(rule ((= goofball (coproj2 ⨆)))  ((let goofball_demand (type goofball)) (let ⨆_type (type ⨆))))
+(rewrite (type (coproj2 ⨆)) (Hom B (ob ⨆)) :when ((= (type ⨆) (Coproduct A B))))
+
+(function copair (TERM TERM TERM) TERM)
+(rule ((= goofball (copair ⨆ f g)))  ((let goofball_demand (type goofball)) (let ⨆_type (type ⨆)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (copair ⨆ f g)) (Hom (ob ⨆) C) :when ((= (type ⨆) (Coproduct A B)) (= (type f) (Hom A C)) (= (type g) (Hom B C))))
+
+
+(birewrite (compose (compose f g) h) (compose f (compose g h)) :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type f) (Hom A B)) (= (type g) (Hom B C)) (= (type h) (Hom C D))))
+(birewrite (compose f (id B)) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (compose (id A) f) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (compose (coproj1 ⨆) (copair ⨆ f g)) f :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type ⨆) (Coproduct A B)) (= (type f) (Hom A C)) (= (type g) (Hom B C))))
+(birewrite (compose (coproj2 ⨆) (copair ⨆ f g)) g :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type ⨆) (Coproduct A B)) (= (type f) (Hom A C)) (= (type g) (Hom B C))))
+(birewrite f g :when ((= (type C) Ob) (= (type ⊥) (Initial )) (= (type f) (Hom (ob ⊥) C)) (= (type g) (Hom (ob ⊥) C))))
+(birewrite (copair (compose (coproj1 ⨆) h) (compose (coproj2 ⨆) h)) h :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type ⨆) (Coproduct A B)) (= (type h) (Hom (ob ⨆) C))))

@@ -1,0 +1,82 @@
+;ThEquipment
+(datatype TYPE)
+(datatype TERM)
+(function type (TERM) TYPE)
+(function Ob () TYPE)
+(function Hom (TERM TERM) TYPE)
+(function Pro (TERM TERM) TYPE)
+(function Cell (TERM TERM TERM TERM) TYPE)
+
+(function id (TERM) TERM)
+(rule ((= goofball (id A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (id A)) (Hom A A) :when ((= (type A) Ob)))
+
+(function compose (TERM TERM) TERM)
+(rule ((= goofball (compose f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (compose f g)) (Hom A C) :when ((= (type f) (Hom A B)) (= (type g) (Hom B C))))
+
+(function compose (TERM TERM) TERM)
+(rule ((= goofball (compose α β)))  ((let goofball_demand (type goofball)) (let α_type (type α)) (let β_type (type β))))
+(rewrite (type (compose α β)) (Cell m p (compose f h) (compose g k)) :when ((= (type α) (Cell m n f g)) (= (type β) (Cell n p h k))))
+
+(function id (TERM) TERM)
+(rule ((= goofball (id m)))  ((let goofball_demand (type goofball)) (let m_type (type m))))
+(rewrite (type (id m)) (Cell m m (id A) (id B)) :when ((= (type m) (Pro A B))))
+
+(function pcompose (TERM TERM) TERM)
+(rule ((= goofball (pcompose m n)))  ((let goofball_demand (type goofball)) (let m_type (type m)) (let n_type (type n))))
+(rewrite (type (pcompose m n)) (Pro A C) :when ((= (type m) (Pro A B)) (= (type n) (Pro B C))))
+
+(function pid (TERM) TERM)
+(rule ((= goofball (pid A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (pid A)) (Pro A A) :when ((= (type A) Ob)))
+
+(function pcompose (TERM TERM) TERM)
+(rule ((= goofball (pcompose α β)))  ((let goofball_demand (type goofball)) (let α_type (type α)) (let β_type (type β))))
+(rewrite (type (pcompose α β)) (Cell (pcompose m n) (pcompose p q) f h) :when ((= (type α) (Cell m p f g)) (= (type β) (Cell n q g h))))
+
+(function pid (TERM) TERM)
+(rule ((= goofball (pid f)))  ((let goofball_demand (type goofball)) (let f_type (type f))))
+(rewrite (type (pid f)) (Cell (pid A) (pid B) f f) :when ((= (type f) (Hom A B))))
+
+(function companion (TERM) TERM)
+(rule ((= goofball (companion f)))  ((let goofball_demand (type goofball)) (let f_type (type f))))
+(rewrite (type (companion f)) (Pro A B) :when ((= (type f) (Hom A B))))
+
+(function conjoint (TERM) TERM)
+(rule ((= goofball (conjoint f)))  ((let goofball_demand (type goofball)) (let f_type (type f))))
+(rewrite (type (conjoint f)) (Pro B A) :when ((= (type f) (Hom A B))))
+
+(function companion_unit (TERM) TERM)
+(rule ((= goofball (companion_unit f)))  ((let goofball_demand (type goofball)) (let f_type (type f))))
+(rewrite (type (companion_unit f)) (Cell (pid A) (companion f) (id A) f) :when ((= (type f) (Hom A B))))
+
+(function companion_counit (TERM) TERM)
+(rule ((= goofball (companion_counit f)))  ((let goofball_demand (type goofball)) (let f_type (type f))))
+(rewrite (type (companion_counit f)) (Cell (companion f) (pid B) f (id B)) :when ((= (type f) (Hom A B))))
+
+(function conjoint_unit (TERM) TERM)
+(rule ((= goofball (conjoint_unit f)))  ((let goofball_demand (type goofball)) (let f_type (type f))))
+(rewrite (type (conjoint_unit f)) (Cell (pid A) (conjoint f) f (id A)) :when ((= (type f) (Hom A B))))
+
+(function conjoint_counit (TERM) TERM)
+(rule ((= goofball (conjoint_counit f)))  ((let goofball_demand (type goofball)) (let f_type (type f))))
+(rewrite (type (conjoint_counit f)) (Cell (conjoint f) (pid B) (id B) f) :when ((= (type f) (Hom A B))))
+
+
+(birewrite (compose (compose f g) h) (compose f (compose g h)) :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type f) (Hom A B)) (= (type g) (Hom B C)) (= (type h) (Hom C D))))
+(birewrite (compose f (id B)) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (compose (id A) f) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (compose (compose α β) γ) (compose α (compose β γ)) :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type W) Ob) (= (type X) Ob) (= (type Y) Ob) (= (type Z) Ob) (= (type m) (Pro A W)) (= (type n) (Pro B X)) (= (type p) (Pro C Y)) (= (type q) (Pro D Z)) (= (type f) (Hom A B)) (= (type g) (Hom B C)) (= (type h) (Hom C D)) (= (type i) (Hom W X)) (= (type j) (Hom X Y)) (= (type k) (Hom Y Z)) (= (type α) (Cell m n f i)) (= (type β) (Cell n p g j)) (= (type γ) (Cell p q h k))))
+(birewrite (compose α (id n)) α :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type m) (Pro A B)) (= (type n) (Pro C D)) (= (type f) (Hom A C)) (= (type g) (Hom B D)) (= (type α) (Cell m n f g))))
+(birewrite (compose (id m) α) α :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type m) (Pro A B)) (= (type n) (Pro C D)) (= (type f) (Hom A C)) (= (type g) (Hom B D)) (= (type α) (Cell m n f g))))
+(birewrite (pcompose (pcompose m n) p) (pcompose m (pcompose n p)) :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type m) (Pro A B)) (= (type n) (Pro B C)) (= (type p) (Pro C D))))
+(birewrite (pcompose m (pid B)) m :when ((= (type A) Ob) (= (type B) Ob) (= (type m) (Pro A B))))
+(birewrite (pcompose (pid A) m) m :when ((= (type A) Ob) (= (type B) Ob) (= (type m) (Pro A B))))
+(birewrite (pcompose (pcompose α β) γ) (pcompose α (pcompose β γ)) :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type W) Ob) (= (type X) Ob) (= (type Y) Ob) (= (type Z) Ob) (= (type m) (Pro A B)) (= (type n) (Pro B C)) (= (type p) (Pro C D)) (= (type u) (Pro W X)) (= (type v) (Pro X Y)) (= (type w) (Pro Y Z)) (= (type f) (Hom A W)) (= (type g) (Hom B X)) (= (type h) (Hom C Y)) (= (type k) (Hom D Z)) (= (type α) (Cell m u f g)) (= (type β) (Cell n v g h)) (= (type γ) (Cell p w h k))))
+(birewrite (pcompose α (pid g)) α :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type m) (Pro A B)) (= (type n) (Pro C D)) (= (type f) (Hom A C)) (= (type g) (Hom B D)) (= (type α) (Cell m n f g))))
+(birewrite (pcompose (pid f) α) α :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type m) (Pro A B)) (= (type n) (Pro C D)) (= (type f) (Hom A C)) (= (type g) (Hom B D)) (= (type α) (Cell m n f g))))
+(birewrite (compose (companion_unit f) (companion_counit f)) (pid f) :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (pcompose (companion_unit f) (companion_counit f)) (id (companion f)) :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (compose (conjoint_unit f) (conjoint_counit f)) (pid f) :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (pcompose (conjoint_counit f) (conjoint_unit f)) (id (conjoint f)) :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))

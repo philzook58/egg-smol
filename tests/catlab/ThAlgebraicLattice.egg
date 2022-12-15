@@ -1,0 +1,35 @@
+;ThAlgebraicLattice
+(datatype TYPE)
+(datatype TERM)
+(function type (TERM) TYPE)
+
+
+(function meet (TERM TERM) TERM)
+(rule ((= goofball (meet A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (meet A B)) El :when ((= (type A) El) (= (type B) El)))
+
+(function top () TERM)
+(rule ((= goofball (top )))  ((let goofball_demand (type goofball)) ))
+(rewrite (type (top )) El :when ())
+
+(function join (TERM TERM) TERM)
+(rule ((= goofball (join A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (join A B)) El :when ((= (type A) El) (= (type B) El)))
+
+(function bottom () TERM)
+(rule ((= goofball (bottom )))  ((let goofball_demand (type goofball)) ))
+(rewrite (type (bottom )) El :when ())
+
+
+(birewrite (meet (meet A B) C) (meet A (meet B C)) :when ((= (type A) El) (= (type B) El) (= (type C) El)))
+(birewrite (meet A (top )) A :when ((= (type A) El)))
+(birewrite (meet (top ) A) A :when ((= (type A) El)))
+(birewrite (meet A B) (meet B A) :when ((= (type A) El) (= (type B) El)))
+(birewrite (meet A A) A :when ((= (type A) El)))
+(birewrite (join (join A B) C) (join A (join B C)) :when ((= (type A) El) (= (type B) El) (= (type C) El)))
+(birewrite (join A (bottom )) A :when ((= (type A) El)))
+(birewrite (join (bottom ) A) A :when ((= (type A) El)))
+(birewrite (join A B) (join B A) :when ((= (type A) El) (= (type B) El)))
+(birewrite (join A A) A :when ((= (type A) El)))
+(birewrite (join A (meet A B)) A :when ((= (type A) El) (= (type B) El)))
+(birewrite (meet A (join A B)) A :when ((= (type A) El) (= (type B) El)))

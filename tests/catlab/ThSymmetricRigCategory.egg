@@ -1,0 +1,51 @@
+;ThSymmetricRigCategory
+(datatype TYPE)
+(datatype TERM)
+(function type (TERM) TYPE)
+(function Ob () TYPE)
+(function Hom (TERM TERM) TYPE)
+
+(function id (TERM) TERM)
+(rule ((= goofball (id A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (id A)) (Hom A A) :when ((= (type A) Ob)))
+
+(function compose (TERM TERM) TERM)
+(rule ((= goofball (compose f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (compose f g)) (Hom A C) :when ((= (type f) (Hom A B)) (= (type g) (Hom B C))))
+
+(function oplus (TERM TERM) TERM)
+(rule ((= goofball (oplus A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (oplus A B)) Ob :when ((= (type A) Ob) (= (type B) Ob)))
+
+(function oplus (TERM TERM) TERM)
+(rule ((= goofball (oplus f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (oplus f g)) (Hom (oplus A C) (oplus B D)) :when ((= (type f) (Hom A B)) (= (type g) (Hom C D))))
+
+(function mzero () TERM)
+(rule ((= goofball (mzero )))  ((let goofball_demand (type goofball)) ))
+(rewrite (type (mzero )) Ob :when ())
+
+(function swap (TERM TERM) TERM)
+(rule ((= goofball (swap A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (swap A B)) (Hom (oplus A B) (oplus B A)) :when ((= (type A) Ob) (= (type B) Ob)))
+
+(function otimes (TERM TERM) TERM)
+(rule ((= goofball (otimes A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (otimes A B)) Ob :when ((= (type A) Ob) (= (type B) Ob)))
+
+(function otimes (TERM TERM) TERM)
+(rule ((= goofball (otimes f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (otimes f g)) (Hom (otimes A C) (otimes B D)) :when ((= (type f) (Hom A B)) (= (type g) (Hom C D))))
+
+(function munit () TERM)
+(rule ((= goofball (munit )))  ((let goofball_demand (type goofball)) ))
+(rewrite (type (munit )) Ob :when ())
+
+(function braid (TERM TERM) TERM)
+(rule ((= goofball (braid A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (braid A B)) (Hom (otimes A B) (otimes B A)) :when ((= (type A) Ob) (= (type B) Ob)))
+
+
+(birewrite (compose (compose f g) h) (compose f (compose g h)) :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type f) (Hom A B)) (= (type g) (Hom B C)) (= (type h) (Hom C D))))
+(birewrite (compose f (id B)) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (compose (id A) f) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))

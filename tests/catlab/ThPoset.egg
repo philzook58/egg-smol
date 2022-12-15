@@ -1,0 +1,18 @@
+;ThPoset
+(datatype TYPE)
+(datatype TERM)
+(function type (TERM) TYPE)
+(function El () TYPE)
+(function Leq (TERM TERM) TYPE)
+
+(function reflexive (TERM) TERM)
+(rule ((= goofball (reflexive A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (reflexive A)) (Leq A A) :when ((= (type A) El)))
+
+(function transitive (TERM TERM) TERM)
+(rule ((= goofball (transitive f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (transitive f g)) (Leq A C) :when ((= (type f) (Leq A B)) (= (type g) (Leq B C))))
+
+
+(birewrite f g :when ((= (type A) El) (= (type B) El) (= (type f) (Leq A B)) (= (type g) (Leq A B))))
+(birewrite A B :when ((= (type A) El) (= (type B) El) (= (type f) (Leq A B)) (= (type g) (Leq B A))))

@@ -1,0 +1,29 @@
+;ThMCategory
+(datatype TYPE)
+(datatype TERM)
+(function type (TERM) TYPE)
+(function Ob () TYPE)
+(function Hom (TERM TERM) TYPE)
+(function Tight (TERM) TYPE)
+
+(function id (TERM) TERM)
+(rule ((= goofball (id A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (id A)) (Hom A A) :when ((= (type A) Ob)))
+
+(function compose (TERM TERM) TERM)
+(rule ((= goofball (compose f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (compose f g)) (Hom A C) :when ((= (type f) (Hom A B)) (= (type g) (Hom B C))))
+
+(function reflexive (TERM) TERM)
+(rule ((= goofball (reflexive A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (reflexive A)) (Tight (id A)) :when ((= (type A) Ob)))
+
+(function transitive (TERM TERM) TERM)
+(rule ((= goofball (transitive t u)))  ((let goofball_demand (type goofball)) (let t_type (type t)) (let u_type (type u))))
+(rewrite (type (transitive t u)) (Tight (compose f g)) :when ((= (type t) (Tight f)) (= (type u) (Tight g))))
+
+
+(birewrite (compose (compose f g) h) (compose f (compose g h)) :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type f) (Hom A B)) (= (type g) (Hom B C)) (= (type h) (Hom C D))))
+(birewrite (compose f (id B)) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (compose (id A) f) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite t t′ :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B)) (= (type t) (Tight f)) (= (type t′) (Tight f))))

@@ -1,0 +1,17 @@
+(function a () TERM)
+(set (type a) Ob)
+
+(function b () TERM)
+(set (type b) Ob)
+
+;(define )
+(calc () 
+    (id (otimes a b))
+    (otimes (id a) (id b))
+    ;(pair (proj1 a b) (proj2 a b))
+)
+
+(calc ()
+    (pair (proj1 a b) (proj2 a b))
+    (pair (proj1 a b) (proj2 a b))
+)

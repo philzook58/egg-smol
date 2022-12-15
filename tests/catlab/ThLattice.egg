@@ -1,0 +1,66 @@
+;ThLattice
+(datatype TYPE)
+(datatype TERM)
+(function type (TERM) TYPE)
+(function El () TYPE)
+(function Leq (TERM TERM) TYPE)
+
+(function reflexive (TERM) TERM)
+(rule ((= goofball (reflexive A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (reflexive A)) (Leq A A) :when ((= (type A) El)))
+
+(function transitive (TERM TERM) TERM)
+(rule ((= goofball (transitive f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (transitive f g)) (Leq A C) :when ((= (type f) (Leq A B)) (= (type g) (Leq B C))))
+
+(function meet (TERM TERM) TERM)
+(rule ((= goofball (meet A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (meet A B)) El :when ((= (type A) El) (= (type B) El)))
+
+(function proj1 (TERM TERM) TERM)
+(rule ((= goofball (proj1 A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (proj1 A B)) (Leq (meet A B) A) :when ((= (type A) El) (= (type B) El)))
+
+(function proj2 (TERM TERM) TERM)
+(rule ((= goofball (proj2 A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (proj2 A B)) (Leq (meet A B) B) :when ((= (type A) El) (= (type B) El)))
+
+(function pair (TERM TERM) TERM)
+(rule ((= goofball (pair f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (pair f g)) (Leq C (meet A B)) :when ((= (type f) (Leq C A)) (= (type g) (Leq C B))))
+
+(function top () TERM)
+(rule ((= goofball (top )))  ((let goofball_demand (type goofball)) ))
+(rewrite (type (top )) El :when ())
+
+(function delete (TERM) TERM)
+(rule ((= goofball (delete A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (delete A)) (Leq A (top )) :when ((= (type A) El)))
+
+(function join (TERM TERM) TERM)
+(rule ((= goofball (join A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (join A B)) El :when ((= (type A) El) (= (type B) El)))
+
+(function coproj1 (TERM TERM) TERM)
+(rule ((= goofball (coproj1 A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (coproj1 A B)) (Leq A (join A B)) :when ((= (type A) El) (= (type B) El)))
+
+(function coproj2 (TERM TERM) TERM)
+(rule ((= goofball (coproj2 A B)))  ((let goofball_demand (type goofball)) (let A_type (type A)) (let B_type (type B))))
+(rewrite (type (coproj2 A B)) (Leq B (join A B)) :when ((= (type A) El) (= (type B) El)))
+
+(function copair (TERM TERM) TERM)
+(rule ((= goofball (copair f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (copair f g)) (Leq (join A B) C) :when ((= (type f) (Leq A C)) (= (type g) (Leq B C))))
+
+(function bottom () TERM)
+(rule ((= goofball (bottom )))  ((let goofball_demand (type goofball)) ))
+(rewrite (type (bottom )) El :when ())
+
+(function create (TERM) TERM)
+(rule ((= goofball (create A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (create A)) (Leq (bottom ) A) :when ((= (type A) El)))
+
+
+(birewrite f g :when ((= (type A) El) (= (type B) El) (= (type f) (Leq A B)) (= (type g) (Leq A B))))
+(birewrite A B :when ((= (type A) El) (= (type B) El) (= (type f) (Leq A B)) (= (type g) (Leq B A))))

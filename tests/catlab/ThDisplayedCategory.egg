@@ -1,0 +1,32 @@
+;ThDisplayedCategory
+(datatype TYPE)
+(datatype TERM)
+(function type (TERM) TYPE)
+(function Ob () TYPE)
+(function Hom (TERM TERM) TYPE)
+(function Fib (TERM) TYPE)
+(function FibHom (TERM TERM TERM) TYPE)
+
+(function id (TERM) TERM)
+(rule ((= goofball (id A)))  ((let goofball_demand (type goofball)) (let A_type (type A))))
+(rewrite (type (id A)) (Hom A A) :when ((= (type A) Ob)))
+
+(function compose (TERM TERM) TERM)
+(rule ((= goofball (compose f g)))  ((let goofball_demand (type goofball)) (let f_type (type f)) (let g_type (type g))))
+(rewrite (type (compose f g)) (Hom A C) :when ((= (type f) (Hom A B)) (= (type g) (Hom B C))))
+
+(function id (TERM) TERM)
+(rule ((= goofball (id x)))  ((let goofball_demand (type goofball)) (let x_type (type x))))
+(rewrite (type (id x)) (FibHom (id A) x x) :when ((= (type x) (Fib A))))
+
+(function compose (TERM TERM) TERM)
+(rule ((= goofball (compose f̄ ḡ)))  ((let goofball_demand (type goofball)) (let f̄_type (type f̄)) (let ḡ_type (type ḡ))))
+(rewrite (type (compose f̄ ḡ)) (FibHom (compose f g) x z) :when ((= (type f̄) (FibHom f x y)) (= (type ḡ) (FibHom g y z))))
+
+
+(birewrite (compose (compose f g) h) (compose f (compose g h)) :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type f) (Hom A B)) (= (type g) (Hom B C)) (= (type h) (Hom C D))))
+(birewrite (compose f (id B)) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (compose (id A) f) f :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B))))
+(birewrite (compose (compose f̄ ḡ) h̄) (compose f̄ (compose ḡ h̄)) :when ((= (type A) Ob) (= (type B) Ob) (= (type C) Ob) (= (type D) Ob) (= (type f) (Hom A B)) (= (type g) (Hom B C)) (= (type h) (Hom C D)) (= (type w) (Fib A)) (= (type x) (Fib B)) (= (type y) (Fib C)) (= (type z) (Fib D)) (= (type f̄) (FibHom f w x)) (= (type ḡ) (FibHom g x y)) (= (type h̄) (FibHom h y z))))
+(birewrite (compose f̄ (id y)) f̄ :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B)) (= (type x) (Fib A)) (= (type y) (Fib B)) (= (type f̄) (FibHom f x y))))
+(birewrite (compose (id x) f̄) f̄ :when ((= (type A) Ob) (= (type B) Ob) (= (type f) (Hom A B)) (= (type x) (Fib A)) (= (type y) (Fib B)) (= (type f̄) (FibHom f x y))))
